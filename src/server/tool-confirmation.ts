@@ -12,3 +12,4 @@ export function listConfirmations(sessionId:string){cleanup();return [...pending
 export function resolveConfirmation(id:string,approvedDecision:boolean){cleanup();const x=pending.get(id);if(!x)throw new Error("Solicitação não encontrada ou expirada.");if(x.status!=="pending")throw new Error("Solicitação já resolvida.");x.status=approvedDecision?"approved":"rejected";pending.set(id,x);if(approvedDecision)approved.set(key(x.sessionId,x.tool,x.query),x.expiresAt);save();return x}
 export function consumeApprovedExecution(sessionId:string,tool:string,query:string){cleanup();const k=key(sessionId,tool,query);if(!approved.has(k))return false;approved.delete(k);save();return true}
 export function clearConfirmation(id:string){load();pending.delete(id);save();return{success:true,id}}
+export function getConfirmationState(id:string){cleanup();const item=pending.get(id);if(item)return item;return null}
