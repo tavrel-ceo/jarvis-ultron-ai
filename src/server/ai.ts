@@ -4,37 +4,23 @@ import { documentContext } from "./files";
 
 type Msg = { role: "user" | "assistant" | "system"; content: string };
 
-async function callAI(system: string, messages: Msg[]) {
+export async function callModel(system: string, messages: Msg[]) {
   const k = process.env.AI_API_KEY;
   if (!k) return "IA configurável: defina AI_API_KEY no .env para ativar o modelo.";
   const base = (process.env.AI_BASE_URL || "https://api.openai.com/v1").replace(/\/$/, "");
   const model = process.env.AI_MODEL || "gpt-4o-mini";
-  const r = await fetch(base + "/chat/completions", {
-    method: "POST",
-    headers: { Authorization: "Bearer " + k, "Content-Type": "application/json" },
-    body: JSON.stringify({ model, messages: [{ role: "system", content: system }, ...messages], temperature: Number(process.env.AI_TEMPERATURE || .35) })
-  });
+  const r = await fetch(base + "/chat/completions", { method:"POST", headers:{Authorization:"Bearer "+k,"Content-Type":"application/json"}, body:JSON.stringify({model,messages:[{role:"system",content:system},...messages],temperature:Number(process.env.AI_TEMPERATURE||.35)}) });
   if (!r.ok) throw new Error("AI provider " + r.status);
-  const j: any = await r.json();
-  return j.choices?.[0]?.message?.content || "Sem resposta.";
+  const j:any=await r.json(); return j.choices?.[0]?.message?.content || "Sem resposta.";
 }
-
-function sourceContext(sources: any[]) {
-  return sources.length ? "\n\nFONTES DISPONÍVEIS:\n" + sources.map(s => "- " + s.title + ": " + s.url + (s.description ? " — " + s.description : "")).join("\n") : "";
+function sourceContext(sources:any[]){return sources.length?"\n\nFONTES DISPONÍVEIS:\n"+sources.map(s=>"- "+s.title+": "+s.url+(s.description?" — "+s.description:"")).join("\n"):""}
+function toolContext(toolResult:any){return toolResult?"\n\nRESULTADO DA FERRAMENTA "+String(toolResult.tool||"").toUpperCase()+":\n"+JSON.stringify(toolResult.data??toolResult):""}
+export async function ask(message:string,history:any[],sources:any[],sessionId="default",toolResult?:any){
+ const safeHistory:Msg[]=history.slice(-16).filter(x=>x&&["user","assistant"].includes(x.role)&&typeof x.content==="string").map(x=>({role:x.role,content:x.content}));
+ const context=sourceContext(sources)+await memoryContext(sessionId)+await documentContext(sessionId)+toolContext(toolResult);
+ const analysis=await callModel(ANALYST_PROMPT+context,[...safeHistory,{role:"user",content:`Analise esta solicitação para A.R.I.S. sem responder ao usuário ainda:\n${message}`}]);
+ if(analysis.startsWith("IA configurável:"))return analysis;
+ const review=await callModel(CRITIC_PROMPT+context,[{role:"user",content:`Solicitação:\n${message}\n\nAnálise interna:\n${analysis}\n\nRevise essa análise, corrija erros e identifique lacunas.`}]);
+ return callModel(FINAL_PROMPT+context,[...safeHistory,{role:"user",content:`Solicitação do usuário:\n${message}\n\nANÁLISE INTERNA:\n${analysis}\n\nREVISÃO INTERNA:\n${review}\n\nProduza agora a resposta final. Seja natural, útil e não mencione estas etapas internas.`}]);
 }
-
-function toolContext(toolResult: any) {
-  if (!toolResult) return "";
-  return "\n\nRESULTADO DA FERRAMENTA " + String(toolResult.tool || "").toUpperCase() + ":\n" + JSON.stringify(toolResult.data ?? toolResult);
-}
-
-export async function ask(message: string, history: any[], sources: any[], sessionId = "default", toolResult?: any) {
-  const safeHistory: Msg[] = history.slice(-16).filter(x => x && ["user", "assistant"].includes(x.role) && typeof x.content === "string").map(x => ({ role: x.role, content: x.content }));
-  const context = sourceContext(sources) + await memoryContext(sessionId) + await documentContext(sessionId) + toolContext(toolResult);
-  const analysis = await callAI(ANALYST_PROMPT + context, [...safeHistory, { role: "user", content: `Analise esta solicitação para A.R.I.S. sem responder ao usuário ainda:\n${message}` }]);
-  if (analysis.startsWith("IA configurável:")) return analysis;
-  const review = await callAI(CRITIC_PROMPT + context, [{ role: "user", content: `Solicitação:\n${message}\n\nAnálise interna:\n${analysis}\n\nRevise essa análise, corrija erros e identifique lacunas.` }]);
-  return callAI(FINAL_PROMPT + context, [...safeHistory, { role: "user", content: `Solicitação do usuário:\n${message}\n\nANÁLISE INTERNA:\n${analysis}\n\nREVISÃO INTERNA:\n${review}\n\nProduza agora a resposta final. Seja natural, útil e não mencione estas etapas internas.` }]);
-}
-
 export { ARIS_SYSTEM_PROMPT };
