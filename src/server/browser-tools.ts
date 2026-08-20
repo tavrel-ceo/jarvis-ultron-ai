@@ -1,0 +1,11 @@
+import { registerTool } from "./tool-engine";
+import { browserOpen,browserSnapshot,browserClick,browserFill,browserPress,browserLinks,browserScreenshot,browserClose } from "./browser-agent";
+const parse=(q:string)=>{try{return JSON.parse(q)}catch{return{value:q}}};
+registerTool({name:"browser_open",description:"Abre uma página web em navegador controlado pela A.R.I.S.",timeoutMs:40000,risk:"low",run:async q=>{const x=parse(q);return{tool:"browser_open",...(await browserOpen(x.url||x.value))}}});
+registerTool({name:"browser_snapshot",description:"Lê o conteúdo textual e estado atual da página aberta.",timeoutMs:20000,risk:"low",run:async()=>({tool:"browser_snapshot",...(await browserSnapshot())})});
+registerTool({name:"browser_links",description:"Extrai links visíveis da página atual.",timeoutMs:20000,risk:"low",run:async()=>({tool:"browser_links",...(await browserLinks())})});
+registerTool({name:"browser_click",description:"Clica em um elemento da página. Pode causar navegação ou ação externa; requer confirmação.",timeoutMs:20000,risk:"medium",requiresConfirmation:true,run:async q=>{const x=parse(q);return{tool:"browser_click",...(await browserClick(x.selector||x.value))}}});
+registerTool({name:"browser_fill",description:"Preenche um campo de formulário. Requer confirmação.",timeoutMs:20000,risk:"medium",requiresConfirmation:true,run:async q=>{const x=parse(q);return{tool:"browser_fill",...(await browserFill(x.selector,x.value??""))}}});
+registerTool({name:"browser_press",description:"Pressiona uma tecla em elemento da página. Requer confirmação.",timeoutMs:20000,risk:"medium",requiresConfirmation:true,run:async q=>{const x=parse(q);return{tool:"browser_press",...(await browserPress(x.selector,x.key||"Enter"))}}});
+registerTool({name:"browser_screenshot",description:"Captura uma imagem da página atual para análise posterior. Requer confirmação por escrita local.",timeoutMs:30000,risk:"medium",requiresConfirmation:true,run:async q=>{const x=parse(q);return{tool:"browser_screenshot",...(await browserScreenshot(x.path||"aris-browser.png"))}}});
+registerTool({name:"browser_close",description:"Fecha a sessão de navegador da A.R.I.S.",timeoutMs:10000,risk:"low",run:async()=>({tool:"browser_close",...(await browserClose())})});
