@@ -1,15 +1,5 @@
 import { runTools, ToolResult } from "./tools";
-
-export type Step = { action: "tool" | "reason"; query: string };
-export type Execution = { steps: Step[]; results: ToolResult[] };
-
-export async function executePlan(steps: Step[], sessionId: string): Promise<Execution> {
-  const results: ToolResult[] = [];
-  const safe = steps.slice(0, 5);
-  for (const step of safe) {
-    if (step.action !== "tool") continue;
-    const result = await runTools(step.query, { sessionId });
-    if (result) results.push(result);
-  }
-  return { steps: safe, results };
-}
+import type { Plan } from "./planner";
+export type Step={action:"tool"|"reason";query:string};export type Execution={steps:Step[];results:ToolResult[];rounds:number};
+export async function executePlan(steps:Step[],sessionId:string):Promise<Execution>{const results:ToolResult[]=[];const safe=steps.slice(0,5);for(const step of safe){if(step.action!=="tool")continue;const result=await runTools(step.query,{sessionId});if(result)results.push(result)}return{steps:safe,results,rounds:1}}
+export async function executeAdaptive(initial:Plan,sessionId:string,replan:(plan:Plan,results:ToolResult[])=>Promise<Plan>):Promise<Execution>{let current=initial,all:ToolResult[]=[];const rounds=[] as Step[][];for(let i=0;i<4&&current.steps.length;i++){const execution=await executePlan(current.steps,sessionId);all.push(...execution.results);rounds.push(execution.steps);const next=await replan(current,all);if(!next.steps.length)break;current=next}return{steps:rounds.flat(),results:all,rounds:rounds.length}}
