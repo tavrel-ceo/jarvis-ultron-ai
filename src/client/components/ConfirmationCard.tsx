@@ -1,0 +1,3 @@
+import React from "react";
+export type Confirmation={id:string;taskId:string;stepId:string;action:string;reason:string;status:string;expiresAt:number};
+export function ConfirmationCard({request,onResolve}:{request:Confirmation;onResolve:(id:string,approved:boolean)=>void}){if(request.status!=="pending")return null;return <div role="alert" className="confirmation-card"><div><strong>🔐 A.R.I.S. precisa da sua autorização</strong><p>{request.reason}</p><small>Ação: {request.action}</small></div><div className="confirmation-actions"><button onClick={()=>onResolve(request.id,true)}>Aprovar</button><button onClick={()=>onResolve(request.id,false)}>Recusar</button></div></div>}
