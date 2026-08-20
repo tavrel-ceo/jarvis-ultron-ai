@@ -1,9 +1,9 @@
 import { ARIS_SYSTEM_PROMPT, ANALYST_PROMPT, CRITIC_PROMPT, FINAL_PROMPT } from "./prompts";
 import { memoryContext } from "./memory";
 import { documentContext } from "./files";
+import { smartMemoryContext } from "./smart-memory";
 
 type Msg = { role: "user" | "assistant" | "system"; content: string };
-
 export async function callModel(system: string, messages: Msg[]) {
   const k = process.env.AI_API_KEY;
   if (!k) return "IA configurável: defina AI_API_KEY no .env para ativar o modelo.";
@@ -14,10 +14,10 @@ export async function callModel(system: string, messages: Msg[]) {
   const j:any=await r.json(); return j.choices?.[0]?.message?.content || "Sem resposta.";
 }
 function sourceContext(sources:any[]){return sources.length?"\n\nFONTES DISPONÍVEIS:\n"+sources.map(s=>"- "+s.title+": "+s.url+(s.description?" — "+s.description:"")).join("\n"):""}
-function toolContext(toolResult:any){return toolResult?"\n\nRESULTADO DA FERRAMENTA "+String(toolResult.tool||"").toUpperCase()+":\n"+JSON.stringify(toolResult.data??toolResult):""}
+function toolContext(toolResult:any){return toolResult?"\n\nRESULTADOS DAS FERRAMENTAS:\n"+JSON.stringify(toolResult.data??toolResult):""}
 export async function ask(message:string,history:any[],sources:any[],sessionId="default",toolResult?:any){
  const safeHistory:Msg[]=history.slice(-16).filter(x=>x&&["user","assistant"].includes(x.role)&&typeof x.content==="string").map(x=>({role:x.role,content:x.content}));
- const context=sourceContext(sources)+await memoryContext(sessionId)+await documentContext(sessionId)+toolContext(toolResult);
+ const context=sourceContext(sources)+await memoryContext(sessionId)+smartMemoryContext(sessionId)+await documentContext(sessionId)+toolContext(toolResult);
  const analysis=await callModel(ANALYST_PROMPT+context,[...safeHistory,{role:"user",content:`Analise esta solicitação para A.R.I.S. sem responder ao usuário ainda:\n${message}`}]);
  if(analysis.startsWith("IA configurável:"))return analysis;
  const review=await callModel(CRITIC_PROMPT+context,[{role:"user",content:`Solicitação:\n${message}\n\nAnálise interna:\n${analysis}\n\nRevise essa análise, corrija erros e identifique lacunas.`}]);
