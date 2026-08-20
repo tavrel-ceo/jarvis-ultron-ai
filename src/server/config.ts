@@ -1,0 +1,2 @@
+const toInt=(value:string|undefined,fallback:number)=>{const n=Number(value);return Number.isFinite(n)&&n>0?n:fallback};
+export const config={name:"A.R.I.S.",version:"3.9.0",port:toInt(process.env.PORT,8787),corsOrigin:process.env.CORS_ORIGIN||true,rateLimit:{windowMs:toInt(process.env.RATE_LIMIT_WINDOW_MS,60000),maxRequests:toInt(process.env.RATE_LIMIT_MAX,30)},bodyLimit:process.env.BODY_LIMIT||"1mb",dataDir:process.env.DATA_DIR||"data",nodeEnv:process.env.NODE_ENV||"development"} as const;
