@@ -1,0 +1,8 @@
+import { registerTool } from "./tool-engine";
+import { inspectProject,readProjectFile,runProjectCommand,detectTestCommand,writeProjectFile } from "./development-agent";
+const parse=(q:string)=>{try{return JSON.parse(q)}catch{return {root:q}}};
+registerTool({name:"dev_inspect_project",description:"Inspeciona um projeto local e identifica estrutura, arquivos e tecnologias prováveis.",timeoutMs:20000,risk:"low",run:async q=>({tool:"dev_inspect_project",...(await inspectProject(parse(q).root||process.cwd()))})});
+registerTool({name:"dev_read_file",description:"Lê um arquivo dentro de um projeto para análise de código.",timeoutMs:20000,risk:"low",run:async q=>{const x=parse(q);return{tool:"dev_read_file",...(await readProjectFile(x.root||process.cwd(),x.file))}}});
+registerTool({name:"dev_detect_tests",description:"Detecta scripts de teste, build e typecheck disponíveis no package.json.",timeoutMs:10000,risk:"low",run:async q=>({tool:"dev_detect_tests",...(await detectTestCommand(parse(q).root||process.cwd()))})});
+registerTool({name:"dev_write_file",description:"Cria ou substitui código dentro de um projeto local. Requer autorização.",timeoutMs:30000,risk:"high",requiresConfirmation:true,run:async q=>{const x=parse(q);return{tool:"dev_write_file",...(await writeProjectFile(x.root||process.cwd(),x.file,x.content||""))}}});
+registerTool({name:"dev_run_command",description:"Executa um comando de desenvolvimento dentro do diretório do projeto. Requer autorização.",timeoutMs:120000,risk:"high",requiresConfirmation:true,run:async q=>{const x=parse(q);return{tool:"dev_run_command",...(await runProjectCommand(x.root||process.cwd(),x.command||"",Number(x.timeoutMs)||120000))}}});
