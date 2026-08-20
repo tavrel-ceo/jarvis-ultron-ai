@@ -1,0 +1,5 @@
+import { registerTool } from "./tool-engine";
+import { prepareGithubWorkflow,finalizeGithubWorkflow } from "./github-workflow-agent";
+const parse=(q:string)=>{try{return JSON.parse(q)}catch{return{cwd:q}}};
+registerTool({name:"github_prepare_dev_workflow",description:"Prepara um fluxo Git de desenvolvimento criando uma branch dedicada após verificar o estado atual.",timeoutMs:30000,risk:"medium",requiresConfirmation:true,run:async q=>{const x=parse(q);return{tool:"github_prepare_dev_workflow",...(await prepareGithubWorkflow(x.cwd||process.cwd(),x.branch||`aris/work-${Date.now()}`,x.commitMessage||""))}}});
+registerTool({name:"github_finalize_dev_workflow",description:"Finaliza fluxo de desenvolvimento criando commit e opcionalmente fazendo push. Requer confirmação.",timeoutMs:120000,risk:"high",requiresConfirmation:true,run:async q=>{const x=parse(q);return{tool:"github_finalize_dev_workflow",...(await finalizeGithubWorkflow(x.cwd||process.cwd(),x.commitMessage||"ARIS: update project",!!x.push))}}});
