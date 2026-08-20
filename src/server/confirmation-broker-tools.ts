@@ -1,0 +1,8 @@
+import { registerTool } from "./tool-engine";
+import { requestConfirmation,getConfirmation,resolveConfirmation,consumeConfirmation,listPendingConfirmations } from "./confirmation-broker";
+const parse=(q:string)=>{try{return JSON.parse(q)}catch{return{}}};
+registerTool({name:"aris_confirmation_request",description:"Cria uma solicitação de aprovação para uma ação sensível.",timeoutMs:10000,risk:"medium",run:async q=>{const x=parse(q);if(!x.taskId||!x.stepId||!x.action)return{tool:"aris_confirmation_request",success:false,error:"CONFIRMATION_INPUT_INVALID"};return{tool:"aris_confirmation_request",success:true,data:requestConfirmation(x.taskId,x.stepId,x.action,x.reason)}}});
+registerTool({name:"aris_confirmation_status",description:"Consulta o estado de uma aprovação.",timeoutMs:10000,risk:"low",run:async q=>{const x=parse(q);return{tool:"aris_confirmation_status",success:true,data:getConfirmation(x.id)}}});
+registerTool({name:"aris_confirmation_resolve",description:"Registra aprovação ou rejeição de uma ação pendente.",timeoutMs:10000,risk:"medium",requiresConfirmation:true,run:async q=>{const x=parse(q);return{tool:"aris_confirmation_resolve",...resolveConfirmation(x.id,Boolean(x.approved))}}});
+registerTool({name:"aris_confirmation_consume",description:"Consome uma aprovação já concedida, permitindo que o executor prossiga uma única vez.",timeoutMs:10000,risk:"medium",run:async q=>{const x=parse(q);return{tool:"aris_confirmation_consume",...consumeConfirmation(x.id)}}});
+registerTool({name:"aris_confirmation_pending",description:"Lista aprovações pendentes de uma tarefa.",timeoutMs:10000,risk:"low",run:async q=>{const x=parse(q);return{tool:"aris_confirmation_pending",success:true,data:listPendingConfirmations(x.taskId)}}});
