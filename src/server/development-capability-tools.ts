@@ -1,0 +1,7 @@
+import { registerTool } from "./tool-engine";
+import { createProject,installDependencies,reviewProject,refactorFile } from "./development-capabilities";
+const parse=(q:string)=>{try{return JSON.parse(q)}catch{return {cwd:q}}};
+registerTool({name:"dev_create_project",description:"Cria a estrutura inicial de um novo projeto local, opcionalmente copiando um template.",timeoutMs:30000,risk:"high",requiresConfirmation:true,run:async q=>{const x=parse(q);return{tool:"dev_create_project",...(await createProject(x.cwd||process.cwd(),x.name||"new-project",x.template))}}});
+registerTool({name:"dev_install_dependencies",description:"Instala dependências de um projeto usando o gerenciador detectado.",timeoutMs:190000,risk:"high",requiresConfirmation:true,run:async q=>{const x=parse(q);return{tool:"dev_install_dependencies",...(await installDependencies(x.cwd||process.cwd(),Array.isArray(x.packages)?x.packages:[],Boolean(x.dev)))}}});
+registerTool({name:"dev_code_review",description:"Coleta código do projeto para revisão estrutural e de qualidade pelo núcleo de raciocínio da A.R.I.S.",timeoutMs:30000,risk:"low",run:async q=>{const x=parse(q);return{tool:"dev_code_review",...(await reviewProject(x.cwd||process.cwd()))}}});
+registerTool({name:"dev_refactor_file",description:"Aplica uma refatoração previamente planejada em um arquivo do projeto. Requer autorização.",timeoutMs:30000,risk:"high",requiresConfirmation:true,run:async q=>{const x=parse(q);return{tool:"dev_refactor_file",...(await refactorFile(x.cwd||process.cwd(),x.file,x.content||""))}}});
