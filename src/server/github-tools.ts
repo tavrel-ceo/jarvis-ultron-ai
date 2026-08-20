@@ -1,0 +1,12 @@
+import { registerTool } from "./tool-engine";
+import { gitStatus,gitDiff,gitLog,gitBranches,gitCreateBranch,gitAddCommit,gitPull,gitPush } from "./github-agent";
+const parse=(q:string)=>{try{return JSON.parse(q)}catch{return {cwd:q}}};
+const cwd=(q:string)=>parse(q).cwd||process.cwd();
+registerTool({name:"git_status",description:"Consulta o estado do repositório Git local.",timeoutMs:15000,risk:"low",run:async q=>({tool:"git_status",...(await gitStatus(cwd(q)))})});
+registerTool({name:"git_diff",description:"Analisa alterações locais ou staged.",timeoutMs:15000,risk:"low",run:async q=>{const x=parse(q);return{tool:"git_diff",...(await gitDiff(x.cwd||process.cwd(),!!x.staged))}}});
+registerTool({name:"git_log",description:"Consulta histórico recente de commits.",timeoutMs:15000,risk:"low",run:async q=>{const x=parse(q);return{tool:"git_log",...(await gitLog(x.cwd||process.cwd(),x.count||10))}}});
+registerTool({name:"git_branches",description:"Lista branches locais e remotas.",timeoutMs:15000,risk:"low",run:async q=>({tool:"git_branches",...(await gitBranches(cwd(q)))})});
+registerTool({name:"git_create_branch",description:"Cria uma branch local. Requer confirmação.",timeoutMs:15000,risk:"medium",requiresConfirmation:true,run:async q=>{const x=parse(q);return{tool:"git_create_branch",...(await gitCreateBranch(x.cwd||process.cwd(),x.name||""))}}});
+registerTool({name:"git_commit",description:"Adiciona alterações e cria commit. Requer confirmação.",timeoutMs:30000,risk:"high",requiresConfirmation:true,run:async q=>{const x=parse(q);return{tool:"git_commit",...(await gitAddCommit(x.cwd||process.cwd(),x.message||""))}}});
+registerTool({name:"git_pull",description:"Atualiza o repositório usando fast-forward only. Requer confirmação.",timeoutMs:90000,risk:"high",requiresConfirmation:true,run:async q=>({tool:"git_pull",...(await gitPull(cwd(q)))})});
+registerTool({name:"git_push",description:"Envia commits para o remoto configurado. Requer confirmação.",timeoutMs:90000,risk:"high",requiresConfirmation:true,run:async q=>({tool:"git_push",...(await gitPush(cwd(q)))})});
