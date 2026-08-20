@@ -1,7 +1,10 @@
 import { registerTool } from "./tool-engine";
-import { listWindows,launchApplication,desktopShell,getSystemInfo } from "./desktop-agent";
+import { listWindows,launchApplication,desktopShell,getSystemInfo,listDirectory,openTarget,runProcess } from "./desktop-agent";
 const parse=(q:string)=>{try{return JSON.parse(q)}catch{return{command:q}}};
 registerTool({name:"desktop_list_windows",description:"Lista aplicações Windows com janelas visíveis.",timeoutMs:30000,risk:"low",run:async()=>({tool:"desktop_list_windows",...(await listWindows())})});
 registerTool({name:"desktop_system_info",description:"Consulta informações básicas do Windows.",timeoutMs:30000,risk:"low",run:async()=>({tool:"desktop_system_info",...(await getSystemInfo())})});
+registerTool({name:"desktop_list_directory",description:"Lista arquivos e pastas de um diretório local.",timeoutMs:15000,risk:"low",run:async q=>{const x=parse(q);return{tool:"desktop_list_directory",...(await listDirectory(x.dir||process.cwd()))}}});
+registerTool({name:"desktop_open",description:"Abre uma aplicação, arquivo ou destino no Windows. Requer confirmação.",timeoutMs:20000,risk:"medium",requiresConfirmation:true,run:async q=>{const x=parse(q);return{tool:"desktop_open",...(await openTarget(x.target||x.command||""))}}});
 registerTool({name:"desktop_launch_application",description:"Abre uma aplicação no Windows. Requer confirmação.",timeoutMs:30000,risk:"high",requiresConfirmation:true,run:async q=>{const x=parse(q);return{tool:"desktop_launch_application",...(await launchApplication(x.command,x.args||[]))}}});
-registerTool({name:"desktop_shell",description:"Executa um comando PowerShell no computador. Requer confirmação.",timeoutMs:30000,risk:"high",requiresConfirmation:true,run:async q=>{const x=parse(q);return{tool:"desktop_shell",...(await desktopShell(x.command||""))}}});
+registerTool({name:"desktop_run_process",description:"Executa um processo e coleta sua saída. Requer confirmação.",timeoutMs:70000,risk:"high",requiresConfirmation:true,run:async q=>{const x=parse(q);return{tool:"desktop_run_process",...(await runProcess(x.program||x.command||"",x.args||[]))}}});
+registerTool({name:"desktop_shell",description:"Executa um comando PowerShell no computador. Requer confirmação.",timeoutMs:70000,risk:"high",requiresConfirmation:true,run:async q=>{const x=parse(q);return{tool:"desktop_shell",...(await desktopShell(x.command||""))}}});
