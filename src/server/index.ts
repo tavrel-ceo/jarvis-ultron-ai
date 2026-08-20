@@ -5,32 +5,15 @@ import { ask } from "./ai";
 import { remember, recall, clearMemory } from "./memory";
 import { runTools, availableTools } from "./tools";
 import { saveDocument, listDocuments, clearDocuments } from "./files";
-
-const app = express();
-const hits = new Map<string, { count: number; reset: number }>();
-const WINDOW = 60000;
-const LIMIT = 30;
-const clean = (s: unknown) => String(s || "default").slice(0, 100).replace(/[^a-zA-Z0-9_-]/g, "") || "default";
-
-app.disable("x-powered-by");
-app.use(cors({ origin: process.env.CORS_ORIGIN || true }));
-app.use(express.json({ limit: "1mb" }));
-app.use((req, res, next) => {
-  res.setHeader("X-Content-Type-Options", "nosniff");
-  res.setHeader("X-Frame-Options", "DENY");
-  res.setHeader("Referrer-Policy", "no-referrer");
-  if (req.path === "/api/health") return next();
-  const key = req.ip || "unknown", now = Date.now(), h = hits.get(key);
-  if (!h || now > h.reset) { hits.set(key, { count: 1, reset: now + WINDOW }); return next(); }
-  if (h.count >= LIMIT) return res.status(429).json({ error: "Limite temporário de requisições atingido. Tente novamente em instantes." });
-  h.count++; next();
-});
-
-app.get("/api/health", (_, r) => r.json({ ok: true, name: "A.R.I.S.", version: "2.5.0", capabilities: ["chat", "web", "calculator", "clock", "persistent-memory", "documents", "orchestration", "rate-limit"], tools: availableTools() }));
-app.get("/api/memory/:sessionId", async (req, res) => res.json({ memory: (await recall(clean(req.params.sessionId))).map(x => x.content) }));
-app.delete("/api/memory/:sessionId", async (req, res) => { const id = clean(req.params.sessionId); await clearMemory(id); await clearDocuments(id); res.json({ ok: true }); });
-app.get("/api/documents/:sessionId", async (req, res) => res.json({ documents: await listDocuments(clean(req.params.sessionId)) }));
-app.post("/api/documents/:sessionId", async (req, res) => { const { name, content } = req.body; if (typeof content !== "string" || !content.trim()) return res.status(400).json({ error: "content é obrigatório" }); if (content.length > 40000) return res.status(413).json({ error: "Documento excede 40.000 caracteres" }); await saveDocument(clean(req.params.sessionId), typeof name === "string" ? name : "document.txt", content); res.json({ ok: true }); });
-app.post("/api/chat", async (req, res) => { try { const { message, history = [], web = true, sessionId = "default" } = req.body; if (typeof message !== "string" || !message.trim()) return res.status(400).json({ error: "message é obrigatório" }); const id = clean(sessionId), tool = web ? await runTools(message) : null, sources = tool?.tool === "web_search" ? tool.sources || [] : [], answer = await ask(message, Array.isArray(history) ? history : [], sources, id, tool); await remember(id, "Usuário: " + message); await remember(id, "A.R.I.S.: " + answer); res.json({ answer, sources, tool: tool?.tool || null, sessionId: id }); } catch (e) { res.status(500).json({ error: e instanceof Error ? e.message : "erro interno" }); } });
-
-app.listen(Number(process.env.PORT || 8787), () => console.log("A.R.I.S. online"));
+import { plan } from "./planner";
+const app=express();const hits=new Map<string,{count:number;reset:number}>();const WINDOW=60000,LIMIT=30;
+const clean=(s:unknown)=>String(s||"default").slice(0,100).replace(/[^a-zA-Z0-9_-]/g,"")||"default";
+app.disable("x-powered-by");app.use(cors({origin:process.env.CORS_ORIGIN||true}));app.use(express.json({limit:"1mb"}));
+app.use((req,res,next)=>{res.setHeader("X-Content-Type-Options","nosniff");res.setHeader("X-Frame-Options","DENY");res.setHeader("Referrer-Policy","no-referrer");if(req.path==="/api/health")return next();const key=req.ip||"unknown",now=Date.now(),h=hits.get(key);if(!h||now>h.reset){hits.set(key,{count:1,reset:now+WINDOW});return next()}if(h.count>=LIMIT)return res.status(429).json({error:"Limite temporário de requisições atingido. Tente novamente em instantes."});h.count++;next()});
+app.get("/api/health",(_,r)=>r.json({ok:true,name:"A.R.I.S.",version:"2.6.0",capabilities:["chat","planner","web","calculator","clock","persistent-memory","documents","orchestration","rate-limit"],tools:availableTools()}));
+app.get("/api/memory/:sessionId",async(req,res)=>res.json({memory:(await recall(clean(req.params.sessionId))).map(x=>x.content)}));
+app.delete("/api/memory/:sessionId",async(req,res)=>{const id=clean(req.params.sessionId);await clearMemory(id);await clearDocuments(id);res.json({ok:true})});
+app.get("/api/documents/:sessionId",async(req,res)=>res.json({documents:await listDocuments(clean(req.params.sessionId))}));
+app.post("/api/documents/:sessionId",async(req,res)=>{const{name,content}=req.body;if(typeof content!=="string"||!content.trim())return res.status(400).json({error:"content é obrigatório"});if(content.length>40000)return res.status(413).json({error:"Documento excede 40.000 caracteres"});await saveDocument(clean(req.params.sessionId),typeof name==="string"?name:"document.txt",content);res.json({ok:true})});
+app.post("/api/chat",async(req,res)=>{try{const{message,history=[],web=true,sessionId="default"}=req.body;if(typeof message!=="string"||!message.trim())return res.status(400).json({error:"message é obrigatório"});const id=clean(sessionId),p=await plan(message);const tool=p.useTools&&web?await runTools(p.toolQuery||message,{sessionId:id}):null;const sources=tool?.tool==="web_search"?(tool.data as any)?.sources||[]:[];const answer=await ask(message,Array.isArray(history)?history:[],sources,id,tool);await remember(id,"Usuário: "+message);await remember(id,"A.R.I.S.: "+answer);res.json({answer,sources,tool:tool?.tool||null,plan:p,sessionId:id})}catch(e){res.status(500).json({error:e instanceof Error?e.message:"erro interno"})}});
+app.listen(Number(process.env.PORT||8787),()=>console.log("A.R.I.S. online"));
