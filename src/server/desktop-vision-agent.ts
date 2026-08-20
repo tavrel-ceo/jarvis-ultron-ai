@@ -1,0 +1,11 @@
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
+import { promises as fs } from "node:fs";
+const exec=promisify(execFile);
+export type DesktopVisionResult={success:boolean;data?:unknown;error?:string};
+async function ps(script:string){try{const r=await exec("powershell.exe",["-NoProfile","-NonInteractive","-ExecutionPolicy","Bypass","-Command",script],{timeout:30000,maxBuffer:10_000_000});return{success:true,data:r.stdout.trim()}}catch(e:any){return{success:false,error:e?.stderr?.trim()||e?.message||"POWERSHELL_FAILED"}}}
+export async function screenshot(path="./aris-screen.png"):Promise<DesktopVisionResult>{const target=require("node:path").resolve(path);const script=`Add-Type -AssemblyName System.Windows.Forms; Add-Type -AssemblyName System.Drawing; $b=[System.Windows.Forms.Screen]::PrimaryScreen.Bounds; $bmp=New-Object System.Drawing.Bitmap $b.Width,$b.Height; $g=[System.Drawing.Graphics]::FromImage($bmp); $g.CopyFromScreen($b.Location,[System.Drawing.Point]::Empty,$b.Size); $bmp.Save('${target.replace(/'/g,"''")}',[System.Drawing.Imaging.ImageFormat]::Png); $g.Dispose(); $bmp.Dispose()`;const r=await ps(script);if(!r.success)return r;return{success:true,data:{path:target}}}
+export async function mousePosition(){return ps("Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.Cursor]::Position | Select-Object X,Y | ConvertTo-Json -Compress")}
+export async function sendKeys(keys:string){if(!keys.trim())return{success:false,error:"KEYS_REQUIRED"};return ps(`Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.SendKeys]::SendWait('${keys.replace(/'/g,"''")}')`)}
+export async function click(x:number,y:number){if(!Number.isFinite(x)||!Number.isFinite(y))return{success:false,error:"COORDINATES_INVALID"};const script=`Add-Type -TypeDefinition 'using System; using System.Runtime.InteropServices; public class M { [DllImport("user32.dll")] public static extern void mouse_event(uint f,uint dx,uint dy,uint d,uint e); }'; Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.Cursor]::Position=New-Object System.Drawing.Point(${Math.round(x)},${Math.round(y)}); [M]::mouse_event(2,0,0,0,0); [M]::mouse_event(4,0,0,0,0)`;return ps(script)}
+export async function writeText(text:string){return sendKeys(text.replace(/[+^%~(){}]/g,m=>`{${m}}`))}
