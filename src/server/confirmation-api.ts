@@ -1,2 +1,10 @@
-import { getConfirmation,resolveConfirmation,listPendingConfirmations } from "./confirmation-broker";
-export function confirmationApi(){return{pending:(taskId?:string)=>listPendingConfirmations(taskId),status:(id:string)=>getConfirmation(id),resolve:(id:string,approved:boolean)=>resolveConfirmation(id,approved)}}
+import { Router } from "express";
+import { executeTool } from "./tool-engine";
+import { createConfirmation,getConfirmation,listConfirmations,resolveConfirmation } from "./tool-confirmation";
+
+export function confirmationApi(){return{create:createConfirmation,pending:(sessionId:string)=>listConfirmations(sessionId),status:(id:string)=>getConfirmation(id),resolve:(id:string,approved:boolean)=>resolveConfirmation(id,approved)}}
+
+export const confirmationRouter=Router();
+confirmationRouter.get("/:sessionId",(req,res)=>res.json({confirmations:listConfirmations(String(req.params.sessionId))}));
+confirmationRouter.get("/status/:id",(req,res)=>{const item=getConfirmation(String(req.params.id));if(!item)return res.status(404).json({error:"Solicitação não encontrada ou expirada."});res.json(item)});
+confirmationRouter.post("/:id/resolve",async(req,res)=>{try{const item=getConfirmation(String(req.params.id));if(!item)return res.status(404).json({error:"Solicitação não encontrada ou expirada."});if(typeof req.body?.approved!=="boolean")return res.status(400).json({error:"approved é obrigatório"});if(typeof req.body?.sessionId!=="string"||req.body.sessionId!==item.sessionId)return res.status(403).json({error:"Sessão não autorizada."});const resolved=resolveConfirmation(item.id,req.body.approved);if(!req.body.approved)return res.json({ok:true,confirmation:resolved,result:{success:false,tool:item.tool,error:"CONFIRMATION_REJECTED"}});const result=await executeTool(item.tool,item.query,{sessionId:item.sessionId,projectId:item.projectId},true);return res.json({ok:true,confirmation:resolved,result})}catch(e){return res.status(400).json({error:e instanceof Error?e.message:"Não foi possível resolver a confirmação."})}});
