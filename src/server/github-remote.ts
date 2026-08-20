@@ -1,0 +1,10 @@
+import { callModel } from "./ai";
+export type RemoteResult={success:boolean;data?:unknown;error?:string};
+const base=()=>process.env.GITHUB_API_URL||"https://api.github.com";
+async function request(path:string,init:RequestInit={}):Promise<RemoteResult>{try{const token=process.env.GITHUB_TOKEN;if(!token)return{success:false,error:"GITHUB_TOKEN_NOT_CONFIGURED"};const r=await fetch(`${base()}${path}`,{...init,headers:{Accept:"application/vnd.github+json",Authorization:`Bearer ${token}`,"X-GitHub-Api-Version":"2022-11-28",...(init.headers||{})}});const text=await r.text();let data:any;try{data=JSON.parse(text)}catch{data=text}return{success:r.ok,data,error:r.ok?undefined:`GITHUB_HTTP_${r.status}`}}catch(e){return{success:false,error:e instanceof Error?e.message:"GitHub request failed"}}}
+export const githubRepo=async(owner:string,repo:string)=>request(`/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`);
+export const githubIssues=async(owner:string,repo:string,state="open")=>request(`/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/issues?state=${encodeURIComponent(state)}`);
+export const githubPulls=async(owner:string,repo:string,state="open")=>request(`/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/pulls?state=${encodeURIComponent(state)}`);
+export const githubBranches=async(owner:string,repo:string)=>request(`/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/branches`);
+export const githubFile=async(owner:string,repo:string,filePath:string,ref="main")=>request(`/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/contents/${filePath.split("/").map(encodeURIComponent).join("/")}?ref=${encodeURIComponent(ref)}`);
+export async function reviewText(text:string){if(!process.env.AI_API_KEY)return{success:false,error:"AI_API_KEY_NOT_CONFIGURED"};const result=await callModel(`Faça code review técnico. Identifique bugs, riscos, regressões, problemas de manutenção e melhorias. Seja objetivo e não invente fatos.\nCódigo/diff:\n${text}`,[{role:"user",content:"Analise o código."}]);return{success:true,data:result}}
