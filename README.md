@@ -29,3 +29,6 @@ A.R.I.S. é uma assistente pessoal e centro de operações construído com React
 
 ## Próximas expansões
 Persistência externa de memória, autenticação, upload e análise de arquivos, sistema de ferramentas extensível, conectores de APIs, observabilidade e implantação de produção.
+
+## Proteção de acesso (etapa mobile)
+Em `NODE_ENV=production`, a API **não inicia** sem `ARIS_ACCESS_TOKEN`. Defina um token aleatório longo apenas no ambiente do servidor e informe-o em **Configurar acesso** na interface. O token fica na sessão do navegador; não inclua chaves de modelos no cliente. Em modo autenticado, notificações SSE estão temporariamente indisponíveis (sem enviar tokens pela URL). Este é um bloqueio inicial para uso privado, **não** substitui autenticação individual, isolamento de sessões, TLS e auditoria antes de oferecer o serviço a múltiplos usuários.
