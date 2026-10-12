@@ -11,7 +11,8 @@
     "typecheck": "tsc --noEmit",
     "check": "npm run typecheck && npm run build",
     "android:sync": "cap sync android",
-    "android:open": "cap open android"
+    "android:open": "cap open android",
+    "start:server": "tsx src/server/index.ts"
   },
   "dependencies": {
     "@vitejs/plugin-react": "^5.0.2",
