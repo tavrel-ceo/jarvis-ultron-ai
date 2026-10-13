@@ -33,12 +33,8 @@ jobs:
         run: npm install
       - name: Build frontend
         env:
-          VITE_API_URL: ${{ vars.ARIS_API_URL }}
+          VITE_API_URL: ${{ vars.ARIS_API_URL || 'https://aris-private-api.onrender.com' }}
         run: |
-          if [ -z "$VITE_API_URL" ]; then
-            echo "::warning::ARIS_API_URL not set; this APK will not connect to a backend."
-            export VITE_API_URL="https://aris.invalid"
-          fi
           case "$VITE_API_URL" in https://*) ;; *) echo "::error::ARIS_API_URL must start with https://"; exit 1;; esac
           npm run build
       - name: Generate Android project
