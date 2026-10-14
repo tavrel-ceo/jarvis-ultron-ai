@@ -22,6 +22,8 @@ A.R.I.S. é uma assistente pessoal e centro de operações construído com React
 - `AI_API_KEY` — chave do provedor compatível com OpenAI Chat Completions.
 - `AI_BASE_URL` — endpoint base do provedor.
 - `AI_MODEL` — modelo utilizado.
+- `GEMINI_API_KEY`, `CEREBRAS_API_KEY`, `OPENROUTER_API_KEY`, `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` e `HF_TOKEN` — credenciais opcionais dos provedores especialistas; configure apenas no ambiente do servidor.
+- `GET /api/ai/providers` — lista o catálogo de provedores e indica quais credenciais estão configuradas, sem retornar os segredos. A rota exige autenticação em produção.
 - `AI_TEMPERATURE` — temperatura da geração.
 - `BRAVE_SEARCH_API_KEY` — chave de pesquisa web.
 - `CORS_ORIGIN` — origem permitida; por padrão o CORS reflete a origem da requisição.
@@ -44,3 +46,8 @@ O projeto usa Capacitor 7 para gerar um aplicativo Android a partir do frontend 
 A compilação inicial produz um **APK de depuração assinado automaticamente**, adequado somente para testes privados. Para distribuição estável e atualizações, será necessário configurar assinatura de lançamento e guardar a chave com segurança. O aplicativo ainda não inclui integração nativa de voz, captura de tela ou controle de outros apps.
 
 **Limitações conhecidas:** a configuração atual de CORS do servidor deve autorizar a origem do WebView Android (`https://localhost`) quando aplicável. A interface deve ser testada em dispositivo real, e as conexões de eventos em tempo real ainda exigem adaptação à autenticação. O workflow manual só estará disponível normalmente após o arquivo existir na branch padrão.
+
+
+## Catálogo inicial de especialistas (em implementação)
+
+O catálogo inicial descreve Groq, Google Gemini API, Cerebras Inference, OpenRouter, Cloudflare Workers AI e Hugging Face Inference Providers. Nesta etapa, o endpoint `GET /api/ai/providers` apenas inspeciona metadados e presença de configuração; ele **não** dispara chamadas a todos os provedores nem altera o caminho padrão do chat. Isso permite validar a configuração antes de ativar a orquestração multi-provedor. Nunca coloque chaves em arquivos versionados ou variáveis `VITE_*`.
