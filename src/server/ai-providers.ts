@@ -79,7 +79,9 @@ const CATALOG: ProviderCatalogEntry[] = [
 function isConfigured(entry: ProviderCatalogEntry): boolean {
   const keyPresent = Boolean(process.env[entry.keyEnv]?.trim());
   const accountPresent = !entry.accountIdEnv || Boolean(process.env[entry.accountIdEnv]?.trim());
-  return keyPresent && accountPresent;
+  const endpoint = (process.env.AI_BASE_URL || "").toLowerCase();
+  const groqEndpointMatches = entry.id !== "groq" || endpoint.includes("api.groq.com");
+  return keyPresent && accountPresent && groqEndpointMatches;
 }
 
 /** Returns safe provider metadata only. Never returns API keys or other secret values. */
