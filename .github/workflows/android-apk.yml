@@ -2,8 +2,9 @@ name: A.R.I.S. Android APK
 
 on:
   workflow_dispatch:
+  push:
+    branches: ["fix/aris-security-sync-20261013", "feat/aris-mobile-foundation-20261012"]
   pull_request:
-    branches: [main]
 
 permissions:
   contents: read
@@ -31,6 +32,8 @@ jobs:
           ls "$ANDROID_HOME/platforms" || true
       - name: Install dependencies
         run: npm install
+      - name: Validate TypeScript and frontend build
+        run: npm run check
       - name: Build frontend
         env:
           VITE_API_URL: ${{ vars.ARIS_API_URL || 'https://aris-private-api.onrender.com' }}
