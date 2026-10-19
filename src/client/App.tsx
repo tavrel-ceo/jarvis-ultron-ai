@@ -67,7 +67,8 @@ export default function App() {
     refresh();
     const token = sessionStorage.getItem("aris-access-token");
     const stream = token || !API ? null : new EventSource(`${API}/api/events/stream/${sessionId}`);
-    if (!stream) return;
+    if (!stream) { const timer = window.setInterval(() => refresh(), 12000); return () => window.clearInterval(timer); }
+    stream.onopen = () => setApiState("online");
     stream.onmessage = e => {
       try {
         const event = JSON.parse(e.data) as EventItem;
