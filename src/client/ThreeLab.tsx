@@ -134,6 +134,13 @@ export default function ThreeLab({
     renderer.domElement.addEventListener("pointerup", onUp);
     renderer.domElement.addEventListener("pointercancel", onUp);
     renderer.domElement.addEventListener("wheel", onWheel, { passive: false });
+    let pinchDistance = 0, pinchX = 0, pinchY = 0;
+    const touchStart = (event: TouchEvent) => { if (event.touches.length === 2) { pinchDistance = Math.hypot(event.touches[0].clientX-event.touches[1].clientX,event.touches[0].clientY-event.touches[1].clientY); pinchX=(event.touches[0].clientX+event.touches[1].clientX)/2; pinchY=(event.touches[0].clientY+event.touches[1].clientY)/2; } };
+    const touchMove = (event: TouchEvent) => { if (event.touches.length !== 2) return; event.preventDefault(); const t=event.touches,d=Math.hypot(t[0].clientX-t[1].clientX,t[0].clientY-t[1].clientY),x=(t[0].clientX+t[1].clientX)/2,y=(t[0].clientY+t[1].clientY)/2; if(pinchDistance>0){spherical.setFromVector3(camera.position);spherical.radius=THREE.MathUtils.clamp(spherical.radius+(pinchDistance-d)*0.025,2.2,35);camera.position.setFromSpherical(spherical);} camera.position.x-=(x-pinchX)*0.006;camera.position.y+=(y-pinchY)*0.006;camera.lookAt(0,0,0);pinchDistance=d;pinchX=x;pinchY=y; };
+    const touchEnd = () => { pinchDistance=0; };
+    renderer.domElement.addEventListener("touchstart",touchStart,{passive:false});
+    renderer.domElement.addEventListener("touchmove",touchMove,{passive:false});
+    renderer.domElement.addEventListener("touchend",touchEnd);
     const resize = new ResizeObserver(() => {
       if (!el.isConnected) return;
       const w = Math.max(1, el.clientWidth), h = Math.max(1, el.clientHeight);
@@ -148,6 +155,9 @@ export default function ThreeLab({
         renderer.domElement.removeEventListener("pointerup", onUp);
         renderer.domElement.removeEventListener("pointercancel", onUp);
         renderer.domElement.removeEventListener("wheel", onWheel);
+        renderer.domElement.removeEventListener("touchstart",touchStart);
+        renderer.domElement.removeEventListener("touchmove",touchMove);
+        renderer.domElement.removeEventListener("touchend",touchEnd);
       },
     };
     engine.current = state;
@@ -287,7 +297,7 @@ export default function ThreeLab({
       </div>
     </div>
     <div ref={host} className="three-canvas" aria-label="Cena 3D interativa" />
-    <div className="lab-scene-label">MOTOR WEBGL • ARRASTE PARA ORBITAR • RODA PARA ZOOM</div>
+    <div className="lab-scene-label">VIEWPORT 3D • ARRASTE PARA ORBITAR • PINÇA PARA ZOOM • DOIS DEDOS PARA DESLOCAR</div>
     {selectedId !== 0 && objects.some((object) => object.id === selectedId) && <div className="three-controls">
       <div className="lab-selection-heading"><span>OBJETO SELECIONADO</span><strong>{objects.find((object) => object.id === selectedId)?.name}</strong></div>
       <label>Rotação X <input type="range" min="-180" max="180" value={rotation.x} onChange={(event) => onRotationChange({ ...rotation, x: Number(event.target.value) })} /></label>
