@@ -308,7 +308,6 @@ export default function ThreeLab({
         <button onClick={resetCamera}>Recentralizar câmera</button>
         <button onClick={onRemove} disabled={!selectedId || !objects.some((object) => object.id === selectedId)}>Remover selecionado</button>
       </div>
-      </div>}
     <div className="lab-object-list">{objects.map((object) => (
         <button key={object.id} className={selectedId === object.id ? "selected" : ""} onClick={() => onSelect(object.id)}>
           {object.shape === "cube" ? "◇" : "◉"} {object.name}
@@ -316,6 +315,5 @@ export default function ThreeLab({
       ))}</div>
       {notice && <div className="lab-notice" role="status">{notice}</div>}
       <p className="lab-disclaimer">Exportação atual: descrição JSON da cena. Exportação de malhas CAD/GLB/OBJ ainda não está implementada.</p>
-    </div>
   </div>;
 }
