@@ -122,7 +122,7 @@ export default function App() {
             if(action.rotation)setLabRotation({x:Number(action.rotation.x??labRotation.x),y:Number(action.rotation.y??labRotation.y)});
             if(Number.isFinite(Number(action.scale)))setLabScale(Math.max(25,Math.min(200,Number(action.scale))));
             results.push("transformação global da cena atualizada");
-          } else if(["transform","view","display"].includes(action.type)){ /* executado pelo motor 3D via labCommand */ }
+          } else if(action.type==="transform"){results.push("transformação do objeto solicitada ao motor 3D")} else if(action.type==="view"){results.push("vista da câmera alterada")} else if(action.type==="display"){results.push("modo de visualização atualizado")}
           else {unsupported.push(action.type||"ação desconhecida")}
         }
         let reply=String(j.summary||"Plano de edição analisado.");
