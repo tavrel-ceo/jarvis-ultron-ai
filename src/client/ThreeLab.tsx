@@ -12,6 +12,7 @@ type Props = {
   onScaleChange: (v: number) => void;
   onAdd: () => void;
   onRemove: () => void;
+  command?: { nonce: number; actions: any[] } | null;
 };
 type Engine = {
   renderer: THREE.WebGLRenderer;
@@ -26,7 +27,7 @@ type Engine = {
 };
 
 export default function ThreeLab({
-  objects, selectedId, onSelect, rotation, scale, onRotationChange, onScaleChange, onAdd, onRemove,
+  objects, selectedId, onSelect, rotation, scale, onRotationChange, onScaleChange, onAdd, onRemove, command,
 }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const engine = useRef<Engine | null>(null);
@@ -35,7 +36,9 @@ export default function ThreeLab({
   const [showGrid, setShowGrid] = useState(true);
   const [exploded, setExploded] = useState(false);
   const [cameraMode, setCameraMode] = useState<"perspective" | "front" | "top" | "side">("perspective");
-  const [notice, setNotice] = useState("");\n  const [immersive, setImmersive] = useState(false);\n  const [objectTransforms, setObjectTransforms] = useState<Record<number, {position?: {x:number;y:number;z:number};rotation?: {x:number;y:number;z:number};scale?: {x:number;y:number;z:number}}>>({});
+  const [notice, setNotice] = useState("");
+  const [immersive, setImmersive] = useState(false);
+  const [objectTransforms, setObjectTransforms] = useState<Record<number, {position?: {x:number;y:number;z:number};rotation?: {x:number;y:number;z:number};scale?: {x:number;y:number;z:number}}>>({});
 
   useEffect(() => { selectRef.current = onSelect; }, [onSelect]);
 
@@ -81,8 +84,7 @@ export default function ThreeLab({
       new THREE.TorusGeometry(2.25, 0.008, 8, 120),
       new THREE.MeshBasicMaterial({ color: 0xa96cff, transparent: true, opacity: 0.55 }),
     );
-    ring.rotation.x = Math.PI / 2.5;
-    scene.add(ring);
+    ring.rotation.set(0, 0, 0); ring.position.set(0, -1.44, 0); scene.add(ring);
 
     const meshes = new Map<number, THREE.Mesh>();
     const raycaster = new THREE.Raycaster();
@@ -209,7 +211,35 @@ export default function ThreeLab({
     state.camera.lookAt(0, 0, 0);
   }, [cameraMode]);
 
-\n  useEffect(() => {\n    if (!command) return;\n    for (const action of command.actions || []) {\n      if (action.type === "view" && ["perspective","front","top","side"].includes(action.mode)) setCameraMode(action.mode);\n      if (action.type === "display") { if (typeof action.grid === "boolean") setShowGrid(action.grid); if (typeof action.wireframe === "boolean") setWireframe(action.wireframe); if (typeof action.exploded === "boolean") setExploded(action.exploded); }\n      if (action.type === "transform") {\n        const target = String(action.target || "selected").toLowerCase();\n        const object = objects.find(o => o.id === selectedId && target === "selected") || objects.find(o => o.name.toLowerCase() === target) || objects.find(o => String(o.id) === target);\n        if (object) setObjectTransforms(prev => ({...prev, [object.id]: { position: action.position ? {x:Number(action.position.x||0),y:Number(action.position.y||0),z:Number(action.position.z||0)} : prev[object.id]?.position, rotation: action.rotation ? {x:Number(action.rotation.x||0),y:Number(action.rotation.y||0),z:Number(action.rotation.z||0)} : prev[object.id]?.rotation, scale: action.scale ? {x:Number(action.scale.x??1),y:Number(action.scale.y??1),z:Number(action.scale.z??1)} : prev[object.id]?.scale }}));\n      }\n    }\n  }, [command?.nonce]);\n\n  async function toggleImmersive() { const el = host.current?.closest(".three-lab") as HTMLElement | null; if (!el) return; try { if (!document.fullscreenElement) { await el.requestFullscreen(); setImmersive(true); } else { await document.exitFullscreen(); setImmersive(false); } } catch { setNotice("Tela cheia indisponível neste navegador."); } }\n  useEffect(() => { const update = () => setImmersive(!!document.fullscreenElement); document.addEventListener("fullscreenchange", update); return () => document.removeEventListener("fullscreenchange", update); }, []);\n\n  function exportScene() {
+
+  useEffect(() => {
+    if (!command) return;
+    for (const action of command.actions || []) {
+      if (action.type === "view" && ["perspective","front","top","side"].includes(action.mode)) setCameraMode(action.mode);
+      if (action.type === "display") {
+        if (typeof action.grid === "boolean") setShowGrid(action.grid);
+        if (typeof action.wireframe === "boolean") setWireframe(action.wireframe);
+        if (typeof action.exploded === "boolean") setExploded(action.exploded);
+      }
+      if (action.type === "transform") {
+        const target = String(action.target || "selected").toLowerCase();
+        const object = objects.find(o => o.id === selectedId && target === "selected") || objects.find(o => o.name.toLowerCase() === target) || objects.find(o => String(o.id) === target);
+        if (object) setObjectTransforms(prev => ({...prev, [object.id]: {
+          position: action.position ? {x:Number(action.position.x||0),y:Number(action.position.y||0),z:Number(action.position.z||0)} : prev[object.id]?.position,
+          rotation: action.rotation ? {x:Number(action.rotation.x||0),y:Number(action.rotation.y||0),z:Number(action.rotation.z||0)} : prev[object.id]?.rotation,
+          scale: action.scale ? {x:Number(action.scale.x??1),y:Number(action.scale.y??1),z:Number(action.scale.z??1)} : prev[object.id]?.scale
+        }}));
+      }
+    }
+  }, [command?.nonce]);
+
+  async function toggleImmersive() {
+    const el = host.current?.closest(".three-lab") as HTMLElement | null; if (!el) return;
+    try { if (!document.fullscreenElement) { await el.requestFullscreen(); setImmersive(true); } else { await document.exitFullscreen(); setImmersive(false); } }
+    catch { setNotice("Tela cheia indisponível neste navegador."); }
+  }
+  useEffect(() => { const update = () => setImmersive(!!document.fullscreenElement); document.addEventListener("fullscreenchange", update); return () => document.removeEventListener("fullscreenchange", update); }, []);
+\n\n  function exportScene() {
     const payload = {
       format: "aris-scene-v1",
       exportedAt: new Date().toISOString(),
@@ -243,6 +273,7 @@ export default function ThreeLab({
         ))}
       </div>
       <div className="lab-tool-group">
+        <button onClick={() => { void toggleImmersive(); }}>{immersive ? "Sair da tela cheia" : "Tela cheia"}</button>
         <button className={showGrid ? "selected" : ""} onClick={() => setShowGrid((value) => !value)}>Grade</button>
         <button className={wireframe ? "selected" : ""} onClick={() => setWireframe((value) => !value)}>Aramado</button>
         <button className={exploded ? "selected" : ""} onClick={() => setExploded((value) => !value)}>Separar peças</button>
@@ -251,7 +282,8 @@ export default function ThreeLab({
     </div>
     <div ref={host} className="three-canvas" aria-label="Cena 3D interativa" />
     <div className="lab-scene-label">MOTOR WEBGL • ARRASTE PARA ORBITAR • RODA PARA ZOOM</div>
-    <div className="three-controls">
+    {selectedId !== 0 && objects.some((object) => object.id === selectedId) && <div className="three-controls">
+      <div className="lab-selection-heading"><span>OBJETO SELECIONADO</span><strong>{objects.find((object) => object.id === selectedId)?.name}</strong></div>
       <label>Rotação X <input type="range" min="-180" max="180" value={rotation.x} onChange={(event) => onRotationChange({ ...rotation, x: Number(event.target.value) })} /></label>
       <label>Rotação Y <input type="range" min="-180" max="180" value={rotation.y} onChange={(event) => onRotationChange({ ...rotation, y: Number(event.target.value) })} /></label>
       <label>Escala da cena <input type="range" min="25" max="200" value={scale} onChange={(event) => onScaleChange(Number(event.target.value))} /></label>
@@ -260,7 +292,8 @@ export default function ThreeLab({
         <button onClick={resetCamera}>Recentralizar câmera</button>
         <button onClick={onRemove} disabled={!selectedId || !objects.some((object) => object.id === selectedId)}>Remover selecionado</button>
       </div>
-      <div className="lab-object-list">{objects.map((object) => (
+      </div>}
+    <div className="lab-object-list">{objects.map((object) => (
         <button key={object.id} className={selectedId === object.id ? "selected" : ""} onClick={() => onSelect(object.id)}>
           {object.shape === "cube" ? "◇" : "◉"} {object.name}
         </button>
