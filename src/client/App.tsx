@@ -46,6 +46,7 @@ export default function App() {
   const [view, setView] = useState<ViewMode>("overview");
   const [labRotation, setLabRotation] = useState({ x: -18, y: 28 });
   const [labScale, setLabScale] = useState(100);
+  const [labCommand, setLabCommand] = useState<{nonce:number;actions:any[]}|null>(null);
   const [labObjects, setLabObjects] = useState([{ id: 1, name: "Objeto holográfico", shape: "cube" }]);
   const [activeLabObject, setActiveLabObject] = useState(1);
   const [clearDialog, setClearDialog] = useState(false);
@@ -102,7 +103,7 @@ export default function App() {
         const scene = {objects:labObjects,selectedId:activeLabObject,rotation:labRotation,scale:labScale};
         const r = await apiFetch(`${API}/api/lab/command`, {method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({instruction:q,scene,sessionId})});
         const j = await r.json(); if(!r.ok) throw new Error(j.error||"Não foi possível planejar a edição.");
-        const results:string[]=[]; const unsupported:string[]=[];
+        const results:string[]=[]; const unsupported:string[]=[]; setLabCommand({nonce:Date.now(),actions:j.actions||[]});
         for(const action of (j.actions||[])){
           const target=String(action.target||"selected").toLowerCase();
           const source=labObjects.find(o=>o.id===activeLabObject&&target==="selected")||labObjects.find(o=>o.name.toLowerCase()===target)||labObjects.find(o=>String(o.id)===target);
@@ -121,7 +122,7 @@ export default function App() {
             if(action.rotation)setLabRotation({x:Number(action.rotation.x??labRotation.x),y:Number(action.rotation.y??labRotation.y)});
             if(Number.isFinite(Number(action.scale)))setLabScale(Math.max(25,Math.min(200,Number(action.scale))));
             results.push("transformação global da cena atualizada");
-          } else if(["transform","view","display"].includes(action.type)){unsupported.push(action.type)}
+          } else if(["transform","view","display"].includes(action.type)){ /* executado pelo motor 3D via labCommand */ }
           else {unsupported.push(action.type||"ação desconhecida")}
         }
         let reply=String(j.summary||"Plano de edição analisado.");
@@ -190,7 +191,7 @@ export default function App() {
       <div className="workspace">
         <section className="projection-panel">
           <div className="panel-head"><div><small>HOLOGRAPHIC INTERFACE / 01</small><h2>{view === "architecture" ? "Mapa de sistemas" : view === "activity" ? "Fluxo operacional" : view === "lab" ? "Laboratório de criação 3D" : "Projeção holográfica"}</h2></div><span className="live-tag"><i/> VISUALIZAÇÃO</span></div>
-          <div className="projection-stage"><div className="stage-grid"/><div className="scanline"/>{view === "lab" ? <ThreeLab objects={labObjects} selectedId={activeLabObject} onSelect={setActiveLabObject} rotation={labRotation} scale={labScale} onRotationChange={setLabRotation} onScaleChange={setLabScale} onAdd={()=>setLabObjects(v=>{const next={id:Date.now(),name:`Objeto ${v.length+1}`,shape:v.length%2?"orb":"cube"};setActiveLabObject(next.id);return [...v,next]})} onRemove={()=>setLabObjects(v=>{const next=v.filter(o=>o.id!==activeLabObject);setActiveLabObject(next[0]?.id ?? 0);return next})}/> : <Hologram mode={view} taskCount={tasks.length} eventCount={events.length}/>}<div className="stage-corner tl"/> <div className="stage-corner tr"/><div className="stage-corner bl"/><div className="stage-corner br"/><div className="stage-coord">ARIS / HOLO-01<br/>VISUALIZAÇÃO CONCEITUAL</div></div>
+          <div className="projection-stage"><div className="stage-grid"/><div className="scanline"/>{view === "lab" ? <ThreeLab objects={labObjects} selectedId={activeLabObject} onSelect={setActiveLabObject} rotation={labRotation} scale={labScale} onRotationChange={setLabRotation} onScaleChange={setLabScale} command={labCommand} onAdd={()=>setLabObjects(v=>{const next={id:Date.now(),name:`Objeto ${v.length+1}`,shape:v.length%2?"orb":"cube"};setActiveLabObject(next.id);return [...v,next]})} onRemove={()=>setLabObjects(v=>{const next=v.filter(o=>o.id!==activeLabObject);setActiveLabObject(next[0]?.id ?? 0);return next})}/> : <Hologram mode={view} taskCount={tasks.length} eventCount={events.length}/>}<div className="stage-corner tl"/> <div className="stage-corner tr"/><div className="stage-corner bl"/><div className="stage-corner br"/><div className="stage-coord">ARIS / HOLO-01<br/>VISUALIZAÇÃO CONCEITUAL</div></div>
           <div className="view-switch" role="group" aria-label="Modo de visualização"><button className={view==="overview"?"selected":""} onClick={()=>setView("overview")}>Visão geral</button><button className={view==="architecture"?"selected":""} onClick={()=>setView("architecture")}>Arquitetura</button><button className={view==="activity"?"selected":""} onClick={()=>setView("activity")}>Atividade</button><button className={view==="lab"?"selected":""} onClick={()=>setView("lab")}>Laboratório 3D</button></div>
           <div className="projection-note"><span className="pulse-dot"/> <span>{view==="architecture"?"Representação conceitual dos componentes — não é um mapa de dependências verificado.":view==="activity"?"Eventos e tarefas são carregados da sessão quando a API responde.":view==="lab"?"Espaço 3D experimental: selecione objetos, ajuste rotação e escala ou adicione novas formas.":"Interface holográfica ativa. Selecione um modo para explorar o centro de operações."}</span></div>{false&&view==="lab"&&<div className="lab-controls"><div className="lab-control-row"><label>Rotação X <input type="range" min="-75" max="75" value={labRotation.x} onChange={e=>setLabRotation(v=>({...v,x:Number(e.target.value)}))}/></label><label>Rotação Y <input type="range" min="-180" max="180" value={labRotation.y} onChange={e=>setLabRotation(v=>({...v,y:Number(e.target.value)}))}/></label><label>Escala <input type="range" min="55" max="145" value={labScale} onChange={e=>setLabScale(Number(e.target.value))}/></label></div><div className="lab-control-row actions"><button onClick={()=>setLabObjects(v=>[...v,{id:Date.now(),name:`Objeto ${v.length+1}`,shape:v.length%2?"orb":"cube"}])}>＋ Adicionar objeto</button><button onClick={()=>setLabRotation({x:-18,y:28})}>Recentrar visão</button><button onClick={()=>setLabObjects(v=>v.filter(o=>o.id!==activeLabObject))} disabled={!activeLabObject || !labObjects.some(o=>o.id===activeLabObject)}>Remover selecionado</button></div><div className="lab-object-list">{labObjects.map(o=><button key={o.id} className={activeLabObject===o.id?"selected":""} onClick={()=>setActiveLabObject(o.id)}>{o.shape==="cube"?"◇":"◉"} {o.name}</button>)}</div></div>}
         </section>
