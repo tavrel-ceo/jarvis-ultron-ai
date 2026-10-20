@@ -98,10 +98,43 @@ export default function App() {
     const q = text.trim(); setText(""); const history = msgs;
     setMsgs(m => [...m, { role: "user", content: q }]); setBusy(true);
     try {
-      const r = await apiFetch(`${API}/api/chat`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ message:q, history:[...history, {role:"assistant",content:`[Estado do Laboratório 3D: ${JSON.stringify({objetos:labObjects.map(o=>({nome:o.name,forma:o.shape})),selecionado:labObjects.find(o=>o.id===activeLabObject)?.name||null,rotacao:labRotation,escala:labScale})}. Considere como contexto quando pertinente; não alegue ter alterado objetos sem ação real.]`}], web:true, sessionId }) });
-      const j = await r.json();
-      setMsgs(m => [...m, { role: "assistant", content: j.answer || j.error || "Não foi possível obter uma resposta." }]); refresh();
-    } catch { setMsgs(m => [...m, { role: "assistant", content: "Não consegui alcançar a API. Verifique a conexão antes de tentar novamente." }]); }
+      if (view === "lab") {
+        const scene = {objects:labObjects,selectedId:activeLabObject,rotation:labRotation,scale:labScale};
+        const r = await apiFetch(`${API}/api/lab/command`, {method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({instruction:q,scene,sessionId})});
+        const j = await r.json(); if(!r.ok) throw new Error(j.error||"Não foi possível planejar a edição.");
+        const results:string[]=[]; const unsupported:string[]=[];
+        for(const action of (j.actions||[])){
+          const target=String(action.target||"selected").toLowerCase();
+          const source=labObjects.find(o=>o.id===activeLabObject&&target==="selected")||labObjects.find(o=>o.name.toLowerCase()===target)||labObjects.find(o=>String(o.id)===target);
+          if(action.type==="create"){
+            const shape=["cube","orb","cylinder","cone","torus"].includes(action.shape)?action.shape:"cube";
+            const item={id:Date.now()+Math.floor(Math.random()*1000000),name:String(action.name||`Objeto ${labObjects.length+1}`),shape};
+            setLabObjects(prev=>[...prev,item]);setActiveLabObject(item.id);results.push(`criado ${item.name}`);
+          } else if(action.type==="delete"&&source){
+            setLabObjects(prev=>prev.filter(o=>o.id!==source.id));if(source.id===activeLabObject)setActiveLabObject(labObjects.find(o=>o.id!==source.id)?.id||0);results.push(`removido ${source.name}`);
+          } else if(action.type==="duplicate"&&source){
+            const copy={...source,id:Date.now()+Math.floor(Math.random()*1000000),name:source.name+" — cópia"};setLabObjects(prev=>[...prev,copy]);setActiveLabObject(copy.id);results.push(`duplicado ${source.name}`);
+          } else if(action.type==="rename"&&source&&action.name){
+            setLabObjects(prev=>prev.map(o=>o.id===source.id?{...o,name:String(action.name)}:o));results.push(`renomeado para ${String(action.name)}`);
+          } else if((action.type==="select"||action.type==="focus")&&source){setActiveLabObject(source.id);results.push(`selecionado ${source.name}`)}
+          else if(action.type==="scene_transform"){
+            if(action.rotation)setLabRotation({x:Number(action.rotation.x??labRotation.x),y:Number(action.rotation.y??labRotation.y)});
+            if(Number.isFinite(Number(action.scale)))setLabScale(Math.max(25,Math.min(200,Number(action.scale))));
+            results.push("transformação global da cena atualizada");
+          } else if(["transform","view","display"].includes(action.type)){unsupported.push(action.type)}
+          else {unsupported.push(action.type||"ação desconhecida")}
+        }
+        let reply=String(j.summary||"Plano de edição analisado.");
+        if(results.length)reply+=`\n\nExecutado na cena: ${results.join(", ")}.`;
+        if(unsupported.length)reply+=`\nAinda não executado: ${[...new Set(unsupported)].join(", ")}. Essas ferramentas precisam ser conectadas ao editor antes de eu afirmar que foram aplicadas.`;
+        if(!results.length&&!unsupported.length)reply+="\nNenhuma alteração foi executada. Não vou fingir que a cena mudou; precisamos implementar a ferramenta necessária.";
+        setMsgs(m=>[...m,{role:"assistant",content:reply}]);
+      } else {
+        const r = await apiFetch(`${API}/api/chat`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ message:q, history:[...history, {role:"assistant",content:`[Estado do Laboratório 3D: ${JSON.stringify({objetos:labObjects.map(o=>({nome:o.name,forma:o.shape})),selecionado:labObjects.find(o=>o.id===activeLabObject)?.name||null,rotacao:labRotation,escala:labScale})}. Considere como contexto quando pertinente; não alegue ter alterado objetos sem ação real.]`}], web:true, sessionId }) });
+        const j = await r.json(); if(!r.ok) throw new Error(j.error||"Não foi possível obter uma resposta.");
+        setMsgs(m=>[...m,{role:"assistant",content:j.answer||j.error||"Não foi possível obter uma resposta."}]);refresh();
+      }
+    } catch(error) { setMsgs(m=>[...m,{role:"assistant",content:error instanceof Error?error.message:"Não consegui alcançar a API. Verifique a conexão antes de tentar novamente."}]); }
     finally { setBusy(false); }
   }
   async function resolveConfirmation(id: string, approved: boolean) {
