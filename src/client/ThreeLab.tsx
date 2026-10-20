@@ -191,7 +191,11 @@ export default function ThreeLab({
       material.color.set(object.id === selectedId ? 0xf38aff : 0x8e7bff);
       material.emissive.set(object.id === selectedId ? 0x7c1c83 : 0x20154d);
       material.wireframe = wireframe;
-      const transform = objectTransforms[object.id];\n      if (transform?.position) mesh.position.set(transform.position.x, transform.position.y, transform.position.z);\n      if (transform?.rotation) mesh.rotation.set(THREE.MathUtils.degToRad(transform.rotation.x), THREE.MathUtils.degToRad(transform.rotation.y), THREE.MathUtils.degToRad(transform.rotation.z));\n      if (transform?.scale) mesh.scale.set(transform.scale.x, transform.scale.y, transform.scale.z);\n      else mesh.scale.setScalar(object.id === selectedId ? 1.12 : 1);
+      const transform = objectTransforms[object.id];
+      if (transform?.position) mesh.position.set(transform.position.x, transform.position.y, transform.position.z);
+      if (transform?.rotation) mesh.rotation.set(THREE.MathUtils.degToRad(transform.rotation.x), THREE.MathUtils.degToRad(transform.rotation.y), THREE.MathUtils.degToRad(transform.rotation.z));
+      if (transform?.scale) mesh.scale.set(transform.scale.x, transform.scale.y, transform.scale.z);
+      else mesh.scale.setScalar(object.id === selectedId ? 1.12 : 1);
     });
   }, [objects, selectedId, wireframe, exploded, objectTransforms]);
 
@@ -239,7 +243,9 @@ export default function ThreeLab({
     catch { setNotice("Tela cheia indisponível neste navegador."); }
   }
   useEffect(() => { const update = () => setImmersive(!!document.fullscreenElement); document.addEventListener("fullscreenchange", update); return () => document.removeEventListener("fullscreenchange", update); }, []);
-\n\n  function exportScene() {
+
+
+  function exportScene() {
     const payload = {
       format: "aris-scene-v1",
       exportedAt: new Date().toISOString(),
