@@ -73,3 +73,66 @@ main{min-width:0}.topbar{min-height:91px;display:flex;align-items:center;justify
 .lab-selection-heading span{color:#a98cc9}.lab-selection-heading strong{font-family:Inter,sans-serif;font-size:12px;letter-spacing:0}
 .three-controls{grid-template-columns:repeat(3,minmax(0,1fr));align-items:center}
 @media(max-width:640px){.three-lab.immersive{padding:6px}.three-lab.immersive .three-canvas{min-height:42vh}.three-controls{grid-template-columns:1fr}.lab-selection-heading{align-items:flex-start;flex-direction:column}}
+
+
+/* A.R.I.S. LAB — cohesive holographic workspace redesign */
+.projection-stage:has(.three-lab){height:auto;min-height:0;display:block;overflow:visible;background:#07060c}
+.projection-stage:has(.three-lab)>.stage-grid,
+.projection-stage:has(.three-lab)>.scanline,
+.projection-stage:has(.three-lab)>.stage-corner,
+.projection-stage:has(.three-lab)>.stage-coord{display:none}
+.projection-stage:has(.three-lab)>.three-lab{position:relative;inset:auto;min-height:0;isolation:isolate;background:#07060c;overflow:hidden}
+.three-lab{--lab-line:#292039;--lab-muted:#8e83a7;--lab-glow:#bd72ff;width:100%;border:1px solid #2a2039;border-radius:0 0 12px 12px;background:radial-gradient(ellipse at 50% 28%,#30134d38,transparent 54%),#07060c;box-shadow:inset 0 1px #ffffff08}
+.lab-toolbar{position:relative;z-index:2;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 15px;background:linear-gradient(180deg,#100c19,#0b0912);border-bottom:1px solid var(--lab-line)}
+.lab-tool-group{display:flex;align-items:center;flex-wrap:wrap;gap:6px;min-width:0}
+.lab-tool-label{font:9px 'DM Mono',monospace;letter-spacing:1.3px;color:#a68abf;margin-right:5px}
+.lab-toolbar button,.three-actions button,.lab-object-list button{min-height:35px;border:1px solid #30243f;border-radius:7px;background:#100d18;color:#bdb0d1;padding:8px 11px;font-size:10px;letter-spacing:.1px}
+.lab-toolbar button:hover,.lab-toolbar button.selected,.three-actions button:hover,.lab-object-list button:hover,.lab-object-list button.selected{background:linear-gradient(135deg,#57287970,#21152e);border-color:#a35bda;color:#fff;box-shadow:0 0 18px #a74aff12}
+.three-canvas{height:clamp(340px,55vh,680px);min-height:340px;position:relative;overflow:hidden;touch-action:none;background:radial-gradient(ellipse at 50% 48%,#2814403d,transparent 57%),linear-gradient(180deg,#090711,#07060c)}
+.three-canvas:before{content:"";position:absolute;inset:0;pointer-events:none;z-index:1;background:linear-gradient(90deg,#090711a8,transparent 13%,transparent 87%,#090711a8),linear-gradient(180deg,#09071150,transparent 20%,transparent 78%,#090711aa)}
+.three-canvas canvas{position:relative;z-index:0;display:block;width:100%;height:100%;cursor:grab;outline:none}
+.three-canvas canvas:active{cursor:grabbing}
+.three-lab>.lab-scene-label{position:absolute;top:14px;left:16px;bottom:auto;z-index:2;max-width:calc(100% - 32px);padding:8px 10px;border:1px solid #49335b;border-radius:6px;background:#0a0813d9;color:#b6a0d0;font:9px 'DM Mono',monospace;letter-spacing:.7px;line-height:1.6;backdrop-filter:blur(12px)}
+.three-controls{position:relative;z-index:2;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px;padding:16px;border-top:1px solid #342443;background:linear-gradient(180deg,#100c19,#0a0811)}
+.lab-selection-heading{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 0 12px;border-bottom:1px solid #292039}
+.lab-selection-heading span{font:9px 'DM Mono',monospace;letter-spacing:1.1px;color:#9d83b5}
+.lab-selection-heading strong{max-width:60%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#f1e5ff;font-size:13px;font-weight:600}
+.three-controls>label{display:flex;flex-direction:column;gap:10px;min-width:0;color:#c2b3d8;font:10px 'DM Mono',monospace}
+.three-controls input[type=range]{width:100%;accent-color:#c178ff;cursor:pointer}
+.three-actions{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:7px;padding-top:4px}
+.three-actions button{flex:1 1 auto}
+.three-actions button:last-child{border-color:#553040;color:#e6a9c4}
+.lab-object-list{display:flex;align-items:center;gap:7px;flex-wrap:wrap;padding:12px 15px;border-top:1px solid #241b31;background:#0b0912}
+.lab-object-list:before{content:"HIERARQUIA DA CENA";font:9px 'DM Mono',monospace;letter-spacing:1px;color:#857596;margin-right:5px}
+.lab-object-list button{min-height:31px;padding:6px 10px}
+.lab-notice{position:absolute;z-index:5;right:14px;top:62px;max-width:min(340px,calc(100% - 28px));padding:10px 13px;border:1px solid #386a63;border-radius:8px;background:#0b211feF;color:#aaf2df;font-size:11px;box-shadow:0 8px 28px #0007}
+.lab-disclaimer{margin:0;padding:9px 14px;border-top:1px solid #21182d;background:#090710;color:#756a87;font:9px/1.5 'DM Mono',monospace}
+.three-lab.immersive{position:fixed;inset:0;z-index:9999;width:100vw;height:100dvh;min-height:0;overflow:hidden;padding:0;border:0;border-radius:0;display:flex;flex-direction:column;background:#07060c}
+.three-lab.immersive .lab-toolbar{flex-shrink:0;padding:10px 14px}
+.three-lab.immersive .three-canvas{height:auto;min-height:0;flex:1}
+.three-lab.immersive .lab-object-list{flex-shrink:0}
+.three-lab.immersive .lab-disclaimer{display:none}
+.three-lab.immersive .three-controls{flex-shrink:0;grid-template-columns:repeat(3,minmax(0,1fr));padding:10px 14px}
+.three-lab.immersive .three-actions{grid-column:1/-1}
+@media(max-width:760px){
+ .lab-toolbar{align-items:stretch;flex-direction:column;padding:10px}
+ .lab-tool-group{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+ .lab-tool-group:first-child{grid-template-columns:repeat(4,minmax(0,1fr))}
+ .lab-tool-label{grid-column:1/-1;padding:2px 0}
+ .lab-tool-group button{min-width:0;padding:8px 5px;font-size:9px}
+ .lab-tool-group:last-child button:last-child{grid-column:auto}
+ .three-canvas{height:54vh;min-height:300px}
+ .three-controls{grid-template-columns:1fr;padding:12px;gap:12px}
+ .lab-selection-heading{align-items:flex-start;flex-direction:column;gap:5px}
+ .lab-selection-heading strong{max-width:100%}
+ .three-actions{display:grid;grid-template-columns:1fr 1fr}
+ .three-actions button{padding:9px 7px;font-size:9px}
+ .three-actions button:last-child{grid-column:1/-1}
+ .lab-object-list{padding:10px;gap:6px}
+ .lab-object-list:before{width:100%;margin:0 0 2px}
+ .three-lab.immersive .lab-toolbar{max-height:24dvh;overflow:auto}
+ .three-lab.immersive .three-canvas{min-height:28dvh;height:auto;flex:1}
+ .three-lab.immersive .three-controls{grid-template-columns:1fr;max-height:35dvh;overflow:auto}
+ .three-lab.immersive .three-actions{grid-template-columns:1fr 1fr}
+}
+@media(prefers-reduced-motion:reduce){.three-lab *{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
