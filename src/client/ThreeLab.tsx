@@ -35,7 +35,7 @@ export default function ThreeLab({
   const [showGrid, setShowGrid] = useState(true);
   const [exploded, setExploded] = useState(false);
   const [cameraMode, setCameraMode] = useState<"perspective" | "front" | "top" | "side">("perspective");
-  const [notice, setNotice] = useState("");
+  const [notice, setNotice] = useState("");\n  const [immersive, setImmersive] = useState(false);\n  const [objectTransforms, setObjectTransforms] = useState<Record<number, {position?: {x:number;y:number;z:number};rotation?: {x:number;y:number;z:number};scale?: {x:number;y:number;z:number}}>>({});
 
   useEffect(() => { selectRef.current = onSelect; }, [onSelect]);
 
@@ -189,9 +189,9 @@ export default function ThreeLab({
       material.color.set(object.id === selectedId ? 0xf38aff : 0x8e7bff);
       material.emissive.set(object.id === selectedId ? 0x7c1c83 : 0x20154d);
       material.wireframe = wireframe;
-      mesh.scale.setScalar(object.id === selectedId ? 1.12 : 1);
+      const transform = objectTransforms[object.id];\n      if (transform?.position) mesh.position.set(transform.position.x, transform.position.y, transform.position.z);\n      if (transform?.rotation) mesh.rotation.set(THREE.MathUtils.degToRad(transform.rotation.x), THREE.MathUtils.degToRad(transform.rotation.y), THREE.MathUtils.degToRad(transform.rotation.z));\n      if (transform?.scale) mesh.scale.set(transform.scale.x, transform.scale.y, transform.scale.z);\n      else mesh.scale.setScalar(object.id === selectedId ? 1.12 : 1);
     });
-  }, [objects, selectedId, wireframe, exploded]);
+  }, [objects, selectedId, wireframe, exploded, objectTransforms]);
 
   useEffect(() => {
     const state = engine.current;
@@ -209,7 +209,7 @@ export default function ThreeLab({
     state.camera.lookAt(0, 0, 0);
   }, [cameraMode]);
 
-  function exportScene() {
+\n  useEffect(() => {\n    if (!command) return;\n    for (const action of command.actions || []) {\n      if (action.type === "view" && ["perspective","front","top","side"].includes(action.mode)) setCameraMode(action.mode);\n      if (action.type === "display") { if (typeof action.grid === "boolean") setShowGrid(action.grid); if (typeof action.wireframe === "boolean") setWireframe(action.wireframe); if (typeof action.exploded === "boolean") setExploded(action.exploded); }\n      if (action.type === "transform") {\n        const target = String(action.target || "selected").toLowerCase();\n        const object = objects.find(o => o.id === selectedId && target === "selected") || objects.find(o => o.name.toLowerCase() === target) || objects.find(o => String(o.id) === target);\n        if (object) setObjectTransforms(prev => ({...prev, [object.id]: { position: action.position ? {x:Number(action.position.x||0),y:Number(action.position.y||0),z:Number(action.position.z||0)} : prev[object.id]?.position, rotation: action.rotation ? {x:Number(action.rotation.x||0),y:Number(action.rotation.y||0),z:Number(action.rotation.z||0)} : prev[object.id]?.rotation, scale: action.scale ? {x:Number(action.scale.x??1),y:Number(action.scale.y??1),z:Number(action.scale.z??1)} : prev[object.id]?.scale }}));\n      }\n    }\n  }, [command?.nonce]);\n\n  async function toggleImmersive() { const el = host.current?.closest(".three-lab") as HTMLElement | null; if (!el) return; try { if (!document.fullscreenElement) { await el.requestFullscreen(); setImmersive(true); } else { await document.exitFullscreen(); setImmersive(false); } } catch { setNotice("Tela cheia indisponível neste navegador."); } }\n  useEffect(() => { const update = () => setImmersive(!!document.fullscreenElement); document.addEventListener("fullscreenchange", update); return () => document.removeEventListener("fullscreenchange", update); }, []);\n\n  function exportScene() {
     const payload = {
       format: "aris-scene-v1",
       exportedAt: new Date().toISOString(),
@@ -232,7 +232,7 @@ export default function ThreeLab({
 
   function resetCamera() { setCameraMode("perspective"); setNotice("Câmera recentralizada."); }
 
-  return <div className="three-lab">
+  return <div className={`three-lab ${immersive ? "immersive" : ""}`}>
     <div className="lab-toolbar" role="toolbar" aria-label="Ferramentas do Laboratório 3D">
       <div className="lab-tool-group">
         <span className="lab-tool-label">CÂMERA</span>
