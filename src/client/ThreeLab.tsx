@@ -308,6 +308,7 @@ export default function ThreeLab({
         <button onClick={resetCamera}>Recentralizar câmera</button>
         <button onClick={onRemove} disabled={!selectedId || !objects.some((object) => object.id === selectedId)}>Remover selecionado</button>
       </div>
+    </div>}
     <div className="lab-object-list">{objects.map((object) => (
         <button key={object.id} className={selectedId === object.id ? "selected" : ""} onClick={() => onSelect(object.id)}>
           {object.shape === "cube" ? "◇" : "◉"} {object.name}
