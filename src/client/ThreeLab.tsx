@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 
-type LabObject = { id: number; name: string; shape: string };
+type LabObject = { id: number; name: string; shape: string; position?: {x:number;y:number;z:number} };
 type Props = {
   objects: LabObject[];
   selectedId: number;
@@ -38,6 +38,7 @@ export default function ThreeLab({
   const [cameraMode, setCameraMode] = useState<"perspective" | "front" | "top" | "side">("perspective");
   const [notice, setNotice] = useState("");
   const [immersive, setImmersive] = useState(false);
+  const [orientationHint, setOrientationHint] = useState(false);
   const [objectTransforms, setObjectTransforms] = useState<Record<number, {position?: {x:number;y:number;z:number};rotation?: {x:number;y:number;z:number};scale?: {x:number;y:number;z:number}}>>({});
 
   useEffect(() => { selectRef.current = onSelect; }, [onSelect]);
@@ -185,8 +186,10 @@ export default function ThreeLab({
     objects.forEach((object, index) => {
       let mesh = state.meshes.get(object.id);
       if (!mesh) {
-        const geometry = object.shape === "orb"
-          ? new THREE.SphereGeometry(0.52, 32, 24)
+        const geometry = object.shape === "orb" ? new THREE.SphereGeometry(0.52, 32, 24)
+          : object.shape === "cylinder" ? new THREE.CylinderGeometry(0.45, 0.45, 0.9, 32)
+          : object.shape === "cone" ? new THREE.ConeGeometry(0.5, 0.95, 32)
+          : object.shape === "torus" ? new THREE.TorusGeometry(0.42, 0.16, 12, 36)
           : new THREE.BoxGeometry(0.85, 0.85, 0.85);
         const material = new THREE.MeshStandardMaterial({
           color: 0x8e7bff, emissive: 0x20154d, metalness: 0.55, roughness: 0.24, transparent: true, opacity: 0.94,
@@ -196,7 +199,7 @@ export default function ThreeLab({
         state.root.add(mesh); state.meshes.set(object.id, mesh);
       }
       const offset = exploded ? (index - (objects.length - 1) / 2) * 0.95 : 0;
-      mesh.position.set(((index % 3) - 1) * 1.55 + offset, Math.floor(index / 3) * 1.25 - 0.35, Math.floor(index / 9) * -0.9);
+      mesh.position.set(object.position?.x ?? (((index % 3) - 1) * 1.55 + offset), object.position?.y ?? (Math.floor(index / 3) * 1.25 - 0.35), object.position?.z ?? (Math.floor(index / 9) * -0.9));
       const material = mesh.material as THREE.MeshStandardMaterial;
       material.color.set(object.id === selectedId ? 0xf38aff : 0x8e7bff);
       material.emissive.set(object.id === selectedId ? 0x7c1c83 : 0x20154d);
@@ -230,6 +233,12 @@ export default function ThreeLab({
     if (!command) return;
     for (const action of command.actions || []) {
       if (action.type === "view" && ["perspective","front","top","side"].includes(action.mode)) setCameraMode(action.mode);
+      if (action.type === "scene_transform") {
+        if (action.rotation && Number.isFinite(Number(action.rotation.x)) && Number.isFinite(Number(action.rotation.y))) {
+          onRotationChange({ x: THREE.MathUtils.clamp(Number(action.rotation.x), -180, 180), y: THREE.MathUtils.clamp(Number(action.rotation.y), -180, 180) });
+        }
+        if (Number.isFinite(Number(action.scale))) onScaleChange(THREE.MathUtils.clamp(Number(action.scale), 25, 200));
+      }
       if (action.type === "display") {
         if (typeof action.grid === "boolean") setShowGrid(action.grid);
         if (typeof action.wireframe === "boolean") setWireframe(action.wireframe);
@@ -248,11 +257,33 @@ export default function ThreeLab({
   }, [command?.nonce]);
 
   async function toggleImmersive() {
-    const el = host.current?.closest(".three-lab") as HTMLElement | null; if (!el) return;
-    try { if (!document.fullscreenElement) { await el.requestFullscreen(); setImmersive(true); } else { await document.exitFullscreen(); setImmersive(false); } }
-    catch { setNotice("Tela cheia indisponível neste navegador."); }
+    const el = host.current?.closest(".three-lab") as HTMLElement | null;
+    if (!el) return;
+    try {
+      if (!document.fullscreenElement) {
+        await el.requestFullscreen();
+        setImmersive(true);
+        setOrientationHint(window.matchMedia("(orientation: portrait)").matches);
+        try { await (screen.orientation as ScreenOrientation & { lock?: (orientation: string) => Promise<void> }).lock?.("landscape"); } catch { /* orientation lock is browser/device dependent */ }
+      } else {
+        await document.exitFullscreen();
+        setImmersive(false);
+        try { (screen.orientation as ScreenOrientation & { unlock?: () => void }).unlock?.(); } catch { /* optional API */ }
+      }
+    } catch { setNotice("Este dispositivo não permite ativar a tela cheia neste contexto. Tente pelo navegador ou atualize o WebView."); }
   }
-  useEffect(() => { const update = () => setImmersive(!!document.fullscreenElement); document.addEventListener("fullscreenchange", update); return () => document.removeEventListener("fullscreenchange", update); }, []);
+  useEffect(() => {
+    const update = () => {
+      const active = !!document.fullscreenElement;
+      setImmersive(active);
+      if (!active) setOrientationHint(false);
+      else setOrientationHint(window.matchMedia("(orientation: portrait)").matches);
+    };
+    const orientation = () => setOrientationHint(!!document.fullscreenElement && window.matchMedia("(orientation: portrait)").matches);
+    document.addEventListener("fullscreenchange", update);
+    window.addEventListener("orientationchange", orientation);
+    return () => { document.removeEventListener("fullscreenchange", update); window.removeEventListener("orientationchange", orientation); };
+  }, []);
 
 
   function exportScene() {
@@ -293,16 +324,17 @@ export default function ThreeLab({
         <button className={showGrid ? "selected" : ""} onClick={() => setShowGrid((value) => !value)}>Grade</button>
         <button className={wireframe ? "selected" : ""} onClick={() => setWireframe((value) => !value)}>Aramado</button>
         <button className={exploded ? "selected" : ""} onClick={() => setExploded((value) => !value)}>Separar peças</button>
-        <button onClick={exportScene}>Exportar cena</button>
+        <button onClick={exportScene}>Exportar JSON</button>
       </div>
     </div>
     <div ref={host} className="three-canvas" aria-label="Cena 3D interativa" />
-    <div className="lab-scene-label">VIEWPORT 3D • ARRASTE PARA ORBITAR • PINÇA PARA ZOOM • DOIS DEDOS PARA DESLOCAR</div>
+    {!immersive && <div className="lab-scene-label">3D • ARRASTE PARA ORBITAR • PINÇA PARA ZOOM • DOIS DEDOS PARA DESLOCAR</div>}
+    {immersive && orientationHint && <div className="lab-orientation-hint" role="status">Gire o celular para a horizontal para ampliar a área de projeção.</div>}
     {selectedId !== 0 && objects.some((object) => object.id === selectedId) && <div className="three-controls">
       <div className="lab-selection-heading"><span>OBJETO SELECIONADO</span><strong>{objects.find((object) => object.id === selectedId)?.name}</strong></div>
-      <label>Rotação X <input type="range" min="-180" max="180" value={rotation.x} onChange={(event) => onRotationChange({ ...rotation, x: Number(event.target.value) })} /></label>
-      <label>Rotação Y <input type="range" min="-180" max="180" value={rotation.y} onChange={(event) => onRotationChange({ ...rotation, y: Number(event.target.value) })} /></label>
-      <label>Escala da cena <input type="range" min="25" max="200" value={scale} onChange={(event) => onScaleChange(Number(event.target.value))} /></label>
+      <label>Rotação X da cena <output>{Math.round(rotation.x)}°</output><input type="range" min="-180" max="180" value={rotation.x} onChange={(event) => onRotationChange({ ...rotation, x: Number(event.target.value) })} /></label>
+      <label>Rotação Y da cena <output>{Math.round(rotation.y)}°</output><input type="range" min="-180" max="180" value={rotation.y} onChange={(event) => onRotationChange({ ...rotation, y: Number(event.target.value) })} /></label>
+      <label>Escala da cena <output>{scale}%</output><input type="range" min="25" max="200" value={scale} onChange={(event) => onScaleChange(Number(event.target.value))} /></label>
       <div className="three-actions">
         <button onClick={onAdd}>＋ Adicionar objeto</button>
         <button onClick={resetCamera}>Recentralizar câmera</button>
@@ -315,6 +347,6 @@ export default function ThreeLab({
         </button>
       ))}</div>
       {notice && <div className="lab-notice" role="status">{notice}</div>}
-      <p className="lab-disclaimer">Exportação atual: descrição JSON da cena. Exportação de malhas CAD/GLB/OBJ ainda não está implementada.</p>
+      <p className="lab-disclaimer">Exporta a descrição JSON da cena; formatos de malha e CAD ainda não estão disponíveis.</p>
   </div>;
 }
