@@ -100,7 +100,7 @@ export default function App() {
     setMsgs(m => [...m, { role: "user", content: q }]); setBusy(true);
     try {
       if (view === "lab") {
-        const scene = {objects:labObjects,selectedId:activeLabObject,rotation:labRotation,scale:labScale};
+        const scene = {objects:labObjects,selectedId:activeLabObject,rotation:labRotation,scale:labScale,selectedObject:labObjects.find(o=>o.id===activeLabObject)||null};
         const r = await apiFetch(`${API}/api/lab/command`, {method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({instruction:q,scene,sessionId})});
         const j = await r.json(); if(!r.ok) throw new Error(j.error||"Não foi possível planejar a edição.");
         const results:string[]=[]; const unsupported:string[]=[]; setLabCommand({nonce:Date.now(),actions:j.actions||[]});
@@ -109,7 +109,7 @@ export default function App() {
           const source=labObjects.find(o=>o.id===activeLabObject&&target==="selected")||labObjects.find(o=>o.name.toLowerCase()===target)||labObjects.find(o=>String(o.id)===target);
           if(action.type==="create"){
             const shape=["cube","orb","cylinder","cone","torus"].includes(action.shape)?action.shape:"cube";
-            const item={id:Date.now()+Math.floor(Math.random()*1000000),name:String(action.name||`Objeto ${labObjects.length+1}`),shape};
+            const item={id:Date.now()+Math.floor(Math.random()*1000000),name:String(action.name||`Objeto ${labObjects.length+1}`),shape,...(action.position&&Number.isFinite(Number(action.position.x))&&Number.isFinite(Number(action.position.y))&&Number.isFinite(Number(action.position.z))?{position:{x:Number(action.position.x),y:Number(action.position.y),z:Number(action.position.z)}}:{})};
             setLabObjects(prev=>[...prev,item]);setActiveLabObject(item.id);results.push(`criado ${item.name}`);
           } else if(action.type==="delete"&&source){
             setLabObjects(prev=>prev.filter(o=>o.id!==source.id));if(source.id===activeLabObject)setActiveLabObject(labObjects.find(o=>o.id!==source.id)?.id||0);results.push(`removido ${source.name}`);
