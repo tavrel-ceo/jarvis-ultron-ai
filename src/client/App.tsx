@@ -102,7 +102,13 @@ export default function App() {
       if (view === "lab") {
         const scene = {objects:labObjects,selectedId:activeLabObject,rotation:labRotation,scale:labScale,selectedObject:labObjects.find(o=>o.id===activeLabObject)||null};
         const r = await apiFetch(`${API}/api/lab/command`, {method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({instruction:q,scene,sessionId})});
-        const j = await r.json(); if(!r.ok) throw new Error(j.error||"Não foi possível planejar a edição.");
+        const raw = await r.text();
+        let j: any = {};
+        try { j = raw ? JSON.parse(raw) : {}; } catch { /* endpoint may return the host's HTML 404 page */ }
+        if (!r.ok) {
+          if (r.status === 404) throw new Error("A rota /api/lab/command não existe na API publicada. O backend do Render precisa receber a atualização do Laboratório 3D; esta versão do aplicativo ainda não consegue enviar comandos ao editor.");
+          throw new Error(j.error || `Não foi possível planejar a edição (HTTP ${r.status}).`);
+        }
         const results:string[]=[]; const unsupported:string[]=[]; setLabCommand({nonce:Date.now(),actions:j.actions||[]});
         for(const action of (j.actions||[])){
           const target=String(action.target||"selected").toLowerCase();
