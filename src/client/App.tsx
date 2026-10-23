@@ -53,6 +53,7 @@ export default function App() {
   const [showChat, setShowChat] = useState(true);
   const [apiState, setApiState] = useState<"checking" | "online" | "offline">("checking");
   const file = useRef<HTMLInputElement>(null);
+  const pendingLabObjective = useRef<string>("");
 
   async function refresh(id = sessionId) {
     try {
@@ -92,11 +93,16 @@ export default function App() {
   async function newSession() {
     const id = newId(); localStorage.setItem("aris-session", id); setSessionId(id); setClearDialog(false);
     setMsgs([{ role: "assistant", content: "Nova sessão iniciada. Contexto isolado. Podemos prosseguir." }]);
-    setDocs([]); setTasks([]); setEvents([]); setConfirmations([]); setRespondingTask(null); setMenuOpen(false);
+    setDocs([]); setTasks([]); setEvents([]); setConfirmations([]); setRespondingTask(null); setMenuOpen(false); pendingLabObjective.current = "";
   }
   async function send() {
     if (!text.trim() || busy) return;
-    const q = text.trim(); setText(""); const history = msgs;
+    const typed = text.trim(); setText(""); const history = msgs;
+    const isLabContinuation = /^(ok[, ]*)?(agora )?(faça|faz|execute|executa|pode fazer|pode executar|continua|continue|vai)$/i.test(typed);
+    const q = view === "lab" && isLabContinuation && pendingLabObjective.current
+      ? `${pendingLabObjective.current}. Execute agora esse objetivo na cena 3D atual; não peça para repetir o objetivo.`
+      : typed;
+    if (view === "lab" && !isLabContinuation && /\b(crie|criar|construa|construir|faça|fazer|gere|gerar|monte|montar|desenhe|desenhar)\b/i.test(typed)) pendingLabObjective.current = typed;
     setMsgs(m => [...m, { role: "user", content: q }]); setBusy(true);
     try {
       if (view === "lab") {
