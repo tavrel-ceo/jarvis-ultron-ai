@@ -1,0 +1,10 @@
+name = "aris-private-core"
+main = "src/index.ts"
+compatibility_date = "2026-10-12"
+workers_dev = true
+
+# Configure ARIS_ACCESS_TOKEN and AI_API_KEY using:
+# npx wrangler secret put ARIS_ACCESS_TOKEN
+# npx wrangler secret put AI_API_KEY
+# Optional AI_MODEL and AI_BASE_URL are server-side settings.
+# This is an isolated chat-only prototype, not the full Express backend.
