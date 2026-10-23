@@ -199,7 +199,7 @@ export default function ThreeLab({
         state.root.add(mesh); state.meshes.set(object.id, mesh);
       }
       const offset = exploded ? (index - (objects.length - 1) / 2) * 0.95 : 0;
-      mesh.position.set(object.position?.x ?? (((index % 3) - 1) * 1.55 + offset), object.position?.y ?? (Math.floor(index / 3) * 1.25 - 0.35), object.position?.z ?? (Math.floor(index / 9) * -0.9));
+      mesh.position.set((object.position?.x ?? ((index % 3) - 1) * 1.55) + offset, object.position?.y ?? (Math.floor(index / 3) * 1.25 - 0.35), object.position?.z ?? (Math.floor(index / 9) * -0.9));
       const material = mesh.material as THREE.MeshStandardMaterial;
       material.color.set(object.id === selectedId ? 0xf38aff : 0x8e7bff);
       material.emissive.set(object.id === selectedId ? 0x7c1c83 : 0x20154d);
