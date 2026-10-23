@@ -106,7 +106,7 @@ export default function ThreeLab({
       if (moved) {
         spherical.setFromVector3(camera.position);
         spherical.theta -= dx * 0.008;
-        spherical.phi = THREE.MathUtils.clamp(spherical.phi + dy * 0.008, 0.18, Math.PI - 0.18);
+        spherical.phi = THREE.MathUtils.clamp(spherical.phi - dy * 0.008, 0.18, Math.PI - 0.18);
         camera.position.setFromSpherical(spherical);
         camera.lookAt(0, 0, 0);
       }
@@ -259,18 +259,25 @@ export default function ThreeLab({
   async function toggleImmersive() {
     const el = host.current?.closest(".three-lab") as HTMLElement | null;
     if (!el) return;
-    try {
-      if (!document.fullscreenElement) {
-        await el.requestFullscreen();
-        setImmersive(true);
-        setOrientationHint(window.matchMedia("(orientation: portrait)").matches);
-        try { await (screen.orientation as ScreenOrientation & { lock?: (orientation: string) => Promise<void> }).lock?.("landscape"); } catch { /* orientation lock is browser/device dependent */ }
-      } else {
-        await document.exitFullscreen();
-        setImmersive(false);
-        try { (screen.orientation as ScreenOrientation & { unlock?: () => void }).unlock?.(); } catch { /* optional API */ }
+    if (immersive) {
+      if (document.fullscreenElement) {
+        try { await document.exitFullscreen(); } catch { /* CSS fallback still exits */ }
       }
-    } catch { setNotice("Este dispositivo não permite ativar a tela cheia neste contexto. Tente pelo navegador ou atualize o WebView."); }
+      setImmersive(false);
+      try { (screen.orientation as ScreenOrientation & { unlock?: () => void }).unlock?.(); } catch { /* optional API */ }
+      return;
+    }
+    // CSS immersive mode is the reliable fallback for Android WebView, where
+    // Element.requestFullscreen() may be missing or rejected.
+    setImmersive(true);
+    setNotice("");
+    try {
+      if (el.requestFullscreen && !document.fullscreenElement) await el.requestFullscreen();
+    } catch {
+      setNotice("Modo imersivo ativado. O WebView não disponibilizou a API nativa de tela cheia.");
+    }
+    try { await (screen.orientation as ScreenOrientation & { lock?: (orientation: string) => Promise<void> }).lock?.("landscape"); } catch { /* orientation lock is browser/device dependent */ }
+    setOrientationHint(window.matchMedia("(orientation: portrait)").matches);
   }
   useEffect(() => {
     const update = () => {
@@ -328,7 +335,6 @@ export default function ThreeLab({
       </div>
     </div>
     <div ref={host} className="three-canvas" aria-label="Cena 3D interativa" />
-    {!immersive && <div className="lab-scene-label">3D • ARRASTE PARA ORBITAR • PINÇA PARA ZOOM • DOIS DEDOS PARA DESLOCAR</div>}
     {immersive && orientationHint && <div className="lab-orientation-hint" role="status">Gire o celular para a horizontal para ampliar a área de projeção.</div>}
     {selectedId !== 0 && objects.some((object) => object.id === selectedId) && <div className="three-controls">
       <div className="lab-selection-heading"><span>OBJETO SELECIONADO</span><strong>{objects.find((object) => object.id === selectedId)?.name}</strong></div>
