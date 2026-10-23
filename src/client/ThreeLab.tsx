@@ -260,37 +260,44 @@ export default function ThreeLab({
     const el = host.current?.closest(".three-lab") as HTMLElement | null;
     if (!el) return;
     if (immersive) {
-      if (document.fullscreenElement) {
-        try { await document.exitFullscreen(); } catch { /* CSS fallback still exits */ }
-      }
       setImmersive(false);
+      if (document.fullscreenElement) {
+        try { await document.exitFullscreen(); } catch { /* CSS mode is also exited below */ }
+      }
       try { (screen.orientation as ScreenOrientation & { unlock?: () => void }).unlock?.(); } catch { /* optional API */ }
       return;
     }
-    // CSS immersive mode is the reliable fallback for Android WebView, where
-    // Element.requestFullscreen() may be missing or rejected.
-    setImmersive(true);
     setNotice("");
-    try {
-      if (el.requestFullscreen && !document.fullscreenElement) await el.requestFullscreen();
-    } catch {
-      setNotice("Modo imersivo ativado. O WebView não disponibilizou a API nativa de tela cheia.");
-    }
-    try { await (screen.orientation as ScreenOrientation & { lock?: (orientation: string) => Promise<void> }).lock?.("landscape"); } catch { /* orientation lock is browser/device dependent */ }
+    // Apply the immersive layout immediately; native browser fullscreen is an enhancement,
+    // not a prerequisite, because Android WebView often rejects requestFullscreen().
+    setImmersive(true);
     setOrientationHint(window.matchMedia("(orientation: portrait)").matches);
+    try {
+      if (typeof el.requestFullscreen === "function" && !document.fullscreenElement) {
+        await el.requestFullscreen({ navigationUI: "hide" } as FullscreenOptions);
+      }
+    } catch {
+      setNotice("Layout imersivo ativo. Para ocultar também as barras do Android, o aplicativo precisa habilitar o modo imersivo nativo.");
+    }
+    try {
+      const orientation = screen.orientation as ScreenOrientation & { lock?: (orientation: string) => Promise<void> };
+      await orientation.lock?.("landscape");
+    } catch { /* orientation lock requires browser support and an eligible display mode */ }
   }
   useEffect(() => {
     const update = () => {
+      // Keep CSS immersive mode active even when the WebView has no native fullscreen API.
+      if (!document.fullscreenElement && immersive) return;
       const active = !!document.fullscreenElement;
       setImmersive(active);
       if (!active) setOrientationHint(false);
       else setOrientationHint(window.matchMedia("(orientation: portrait)").matches);
     };
-    const orientation = () => setOrientationHint(!!document.fullscreenElement && window.matchMedia("(orientation: portrait)").matches);
+    const orientation = () => setOrientationHint(immersive && window.matchMedia("(orientation: portrait)").matches);
     document.addEventListener("fullscreenchange", update);
     window.addEventListener("orientationchange", orientation);
     return () => { document.removeEventListener("fullscreenchange", update); window.removeEventListener("orientationchange", orientation); };
-  }, []);
+  }, [immersive]);
 
 
   function exportScene() {
