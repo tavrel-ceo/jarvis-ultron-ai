@@ -1,0 +1,53 @@
+name: A.R.I.S. Android APK
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Check Android SDK
+        run: |
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          test -d "$ANDROID_HOME"
+          ls "$ANDROID_HOME/platforms" || true
+      - name: Install dependencies
+        run: npm install
+      - name: Build frontend
+        env:
+          VITE_API_URL: ${{ vars.ARIS_API_URL || 'https://aris-private-api.onrender.com' }}
+        run: |
+          case "$VITE_API_URL" in https://*) ;; *) echo "::error::ARIS_API_URL must start with https://"; exit 1;; esac
+          npm run build
+      - name: Generate Android project
+        run: npx cap add android
+      - name: Sync web assets
+        run: npx cap sync android
+      - name: Build installable debug APK
+        working-directory: android
+        run: chmod +x gradlew && ./gradlew assembleDebug --no-daemon
+      - name: Upload private test APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: aris-mobile-debug-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 7
