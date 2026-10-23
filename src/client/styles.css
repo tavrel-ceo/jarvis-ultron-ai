@@ -136,3 +136,46 @@ main{min-width:0}.topbar{min-height:91px;display:flex;align-items:center;justify
  .three-lab.immersive .three-actions{grid-template-columns:1fr 1fr}
 }
 @media(prefers-reduced-motion:reduce){.three-lab *{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
+
+
+/* A.R.I.S. Lab usability hardening: no clipped controls, compact immersive viewport */
+.three-lab .lab-toolbar { flex: 0 0 auto; }
+.three-lab .lab-tool-group { min-width: 0; }
+.three-lab .lab-toolbar button,
+.three-lab .three-actions button,
+.three-lab .lab-object-list button { white-space: normal; overflow-wrap: anywhere; line-height: 1.25; }
+.three-lab .three-controls output { color: #e5c8ff; font: 10px 'DM Mono', monospace; }
+.three-lab .three-controls label { min-width: 0; }
+.three-lab .three-canvas { overscroll-behavior: contain; }
+.three-lab .lab-orientation-hint {
+  position: absolute; z-index: 20; top: 50%; left: 50%; transform: translate(-50%,-50%);
+  width: min(88vw, 340px); padding: 16px 18px; text-align: center;
+  border: 1px solid #8e55b6; border-radius: 12px; color: #f0dcff;
+  background: #100b1deF; box-shadow: 0 12px 50px #0009; backdrop-filter: blur(14px);
+  font-size: 13px; line-height: 1.6; pointer-events: none;
+}
+.three-lab.immersive .lab-toolbar { gap: 8px; }
+.three-lab.immersive .lab-tool-group { gap: 5px; }
+.three-lab.immersive .lab-tool-group button { min-height: 32px; padding: 6px 9px; }
+.three-lab.immersive .lab-object-list { max-height: 16dvh; overflow: auto; overscroll-behavior: contain; }
+.three-lab.immersive .three-controls { gap: 8px; }
+.three-lab.immersive .three-controls label { display: grid; grid-template-columns: minmax(90px,auto) minmax(24px,auto) minmax(80px,1fr); align-items: center; gap: 10px; }
+.three-lab.immersive .three-controls .lab-selection-heading { padding-bottom: 7px; }
+.three-lab.immersive .three-controls .three-actions { padding-top: 0; }
+@media (orientation: landscape) and (max-height: 560px) {
+  .three-lab.immersive .lab-toolbar { flex-direction: row; align-items: center; padding: 5px 8px; }
+  .three-lab.immersive .lab-tool-group { display: flex; flex-wrap: wrap; width: auto; }
+  .three-lab.immersive .lab-tool-label { width: auto; grid-column: auto; margin: 0 3px; font-size: 8px; }
+  .three-lab.immersive .lab-toolbar button { min-height: 28px; padding: 4px 7px; font-size: 9px; }
+  .three-lab.immersive .three-controls { grid-template-columns: repeat(3,minmax(0,1fr)); padding: 6px 10px; gap: 6px; }
+  .three-lab.immersive .three-controls label { grid-template-columns: auto minmax(22px,auto); gap: 4px 8px; font-size: 9px; }
+  .three-lab.immersive .three-controls label input { grid-column: 1/-1; }
+  .three-lab.immersive .three-controls .lab-selection-heading { flex-direction: row; align-items: center; }
+  .three-lab.immersive .lab-object-list { max-height: 12dvh; padding: 5px 8px; }
+  .three-lab.immersive .three-canvas { min-height: 0; }
+}
+@media (orientation: portrait) and (max-width: 760px) {
+  .three-lab.immersive .three-canvas { min-height: 30dvh; }
+  .three-lab.immersive .lab-toolbar { max-height: 25dvh; overflow-y: auto; }
+  .three-lab.immersive .three-controls { max-height: 31dvh; overflow-y: auto; }
+}
